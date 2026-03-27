@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Match — TT Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <h1 class="page-title">Match</h1>
+  <p class="page-subtitle">Mode compétition — score et coups en temps réel</p>
+</div>
+
+<div x-data="{
+  sessionId: {{ active_session.id if active_session else 'null' }},
+  p1Score: {{ active_session.p1_score if active_session else 0 }},
+  p2Score: {{ active_session.p2_score if active_session else 0 }},
+  p1Sets:  {{ active_session.p1_sets_won if active_session else 0 }},
+  p2Sets:  {{ active_session.p2_sets_won if active_session else 0 }},
+  loading: false,
+  fullscreen: false,
+  scoreChanged: false,
+
+  async startSession(r1, r2) {
+    this.loading = true;
+    try {
+      const data = await $store.tennis.apiPost('/sessions/start', {
+        mode: 'match',
+        racket1_id: parseInt(r1),
+        racket2_id: r2 ? parseInt(r2) : null,
+      });
+      this.sessionId = data.id;
+      this.p1Score = 0; this.p2Score = 0; this.p1Sets = 0; this.p2Sets = 0;
+      $store.tennis.resetLive();
+      $store.tennis.startTimer();
+      if (window._ws) window._ws.joinSession(data.id);
+      $store.tennis.notify('Match démarré !', 'success');
+    } catch(e) { $store.tennis.notify(e.message, 'error'); }
+    finally { this.loading = false; }
+  },
+
+  async score(player, action) {
+    if (!this.sessionId) return;
+    const r = await fetch('/api/sessions/' + this.sessionId + '/score', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({player, action})
+    });
+    const data = await r.json();
+    this.p1Score = data.p1_score;
+    this.p2Score = data.p2_score;
+    this.p1Sets  = data.p1_sets_won;
+    this.p2Sets  = data.p2_sets_won;
+    this.scoreChanged = true;
+    setTimeout(() => this.scoreChanged = false, 400);
+  },
+
+  async stopMatch() {
+    if (!this.sessionId) return;
+    this.loading = true;
+    try {
+      await $store.tennis.apiPost('/sessions/' + this.sessionId + '/stop', {});
+      $store.tennis.stopTimer();
+      $store.tennis.notify('Match terminé !', 'success');
+      setTimeout(() => location.href='/analysis', 1500);
+    } catch(e) { $store.tennis.notify(e.message,'error'); }
+    finally { this.loading = false; }
+  }
+}" x-init="
+  if (sessionId) {
+    $store.tennis.startTimer();
+    if (window._ws) window._ws.joinSession(sessionId);
+  }
+">
+
+<!-- Démarrage -->
+<div x-show="!sessionId" class="card animate-in" style="max-width:520px;margin-bottom:1.25rem">
+  <div style="font-weight:700;font-size:1.1rem;margin-bottom:1rem">Configurer le match</div>
+  <div x-data="{r1:'',r2:''}">
+    <label class="label">Raquette Joueur 1</label>
+    <select class="input" x-model="r1" style="cursor:pointer;margin-bottom:0.75rem">
+      <option value="">— Raquette 1 —</option>
+      {% for r in rackets %}
+      <option value="{{ r.id }}">{{ r.label or r.ble_device_name }}</option>
+      {% endfor %}
+    </select>
+    <label class="label">Raquette Joueur 2 (optionnel)</label>
+    <select class="input" x-model="r2" style="cursor:pointer;margin-bottom:1rem">
+      <option value="">— Raquette 2 (optionnel) —</option>
+      {% for r in rackets %}
+      <option value="{{ r.id }}">{{ r.label or r.ble_device_name }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-success btn-lg" style="width:100%;justify-content:center"
+      @click="$root.startSession(r1, r2)" :disabled="!r1 || $root.loading">
+      <i data-lucide="play" style="width:18px;height:18px"></i>
+      <span x-text="$root.loading ? 'Démarrage...' : 'Démarrer le match'"></span>
+    </button>
+  </div>
+</div>
+
+<!-- Match en cours -->
+<div x-show="sessionId">
+  <!-- Score principal -->
+  <div class="card animate-in" style="margin-bottom:1.25rem;text-align:center">
+    <!-- Sets -->
+    <div style="display:flex;justify-content:center;gap:2rem;margin-bottom:0.5rem">
+      <div>
+        <div style="font-size:0.75rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em">J1 — Sets</div>
+        <div style="font-size:2rem;font-weight:900;color:var(--accent-blue)" x-text="p1Sets">0</div>
+      </div>
+      <div style="font-size:1.5rem;color:var(--text-muted);margin-top:0.5rem">vs</div>
+      <div>
+        <div style="font-size:0.75rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em">J2 — Sets</div>
+        <div style="font-size:2rem;font-weight:900;color:var(--accent-red)" x-text="p2Sets">0</div>
+      </div>
+    </div>
+
+    <!-- Points -->
+    <div class="score-display" style="margin:1rem 0" :class="scoreChanged ? 'score-pulse' : ''">
+      <div>
+        <div style="font-size:min(9rem,20vw);font-weight:900;color:var(--accent-blue);line-height:1" x-text="p1Score">0</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">Joueur 1</div>
+      </div>
+      <div class="score-sep">:</div>
+      <div>
+        <div style="font-size:min(9rem,20vw);font-weight:900;color:var(--accent-red);line-height:1" x-text="p2Score">0</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">Joueur 2</div>
+      </div>
+    </div>
+
+    <!-- Boutons score -->
+    <div class="match-btn-grid" style="margin-bottom:1rem">
+      <button class="btn btn-primary btn-lg match-point-btn" @click="score(1,'point')">
+        <i data-lucide="plus" style="width:18px;height:18px"></i> J1 Point
+      </button>
+      <button class="btn" style="background:var(--accent-red);color:#fff" @click="score(2,'point')"
+              x-bind:class="'btn btn-lg match-point-btn'">
+        <i data-lucide="plus" style="width:18px;height:18px"></i> J2 Point
+      </button>
+      <button class="btn btn-ghost" @click="score(1,'undo')">
+        <i data-lucide="undo-2" style="width:16px;height:16px"></i> Annuler J1
+      </button>
+      <button class="btn btn-ghost" @click="score(2,'undo')">
+        <i data-lucide="undo-2" style="width:16px;height:16px"></i> Annuler J2
+      </button>
+    </div>
+    <div style="display:flex;gap:0.75rem;justify-content:center">
+      <button class="btn btn-ghost" @click="score(1,'new_set')">
+        <i data-lucide="flag" style="width:16px;height:16px"></i> Nouveau set
+      </button>
+      <button class="btn btn-danger" @click="stopMatch" :disabled="loading">
+        <i data-lucide="square" style="width:16px;height:16px"></i>
+        <span x-text="loading ? 'Fin...' : 'Terminer le match'"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Coups live -->
+  <div class="grid-2">
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:0.75rem">Timer</div>
+      <div style="font-size:3rem;font-weight:900;letter-spacing:-0.04em" x-text="$store.tennis.formatTime($store.tennis.elapsedSeconds)">00:00</div>
+      <div style="margin-top:0.5rem;color:var(--text-muted);font-size:0.8rem">
+        <span x-text="$store.tennis.strokesPerMin"></span> coups/min
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:0.75rem;display:flex;align-items:center;gap:8px">
+        Coups live <span class="dot dot-green animate-pulse" style="margin-left:auto"></span>
+      </div>
+      <template x-for="[label, key, color] in [
+        ['BH Drive','bh_drive','#6366f1'],['BH Smash','bh_smash','#a855f7'],
+        ['FH Drive','fh_drive','#10b981'],['FH Loop','fh_loop','#f59e0b'],
+        ['FH Smash','fh_smash','#f43f5e']
+      ]">
+        <div class="stroke-bar-wrap">
+          <span class="stroke-bar-label" x-text="label"></span>
+          <div class="stroke-bar-track">
+            <div class="stroke-bar-fill"
+              :style="`width:${$store.tennis.liveStrokes.total?($store.tennis.liveStrokes[key]/$store.tennis.liveStrokes.total*100):0}%;background:${color}`"></div>
+          </div>
+          <span class="stroke-bar-count" x-text="$store.tennis.liveStrokes[key]"></span>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>
+
+<!-- Fullscreen mode -->
+<div class="match-fullscreen" x-show="fullscreen" x-transition>
+  <div style="text-align:center">
+    <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem">Tap pour marquer point</div>
+    <div style="display:flex;gap:2rem;align-items:center">
+      <button class="fullscreen-score-btn" @click="score(1,'point')">
+        <div style="font-size:min(10rem,25vw);font-weight:900;color:var(--accent-blue);line-height:1" x-text="p1Score">0</div>
+        <div style="color:var(--text-muted);margin-top:0.5rem">J1</div>
+      </button>
+      <div style="font-size:3rem;color:var(--text-muted)">:</div>
+      <button class="fullscreen-score-btn" @click="score(2,'point')">
+        <div style="font-size:min(10rem,25vw);font-weight:900;color:var(--accent-red);line-height:1" x-text="p2Score">0</div>
+        <div style="color:var(--text-muted);margin-top:0.5rem">J2</div>
+      </button>
+    </div>
+  </div>
+  <button class="btn btn-ghost" @click="fullscreen=false">
+    <i data-lucide="minimize-2" style="width:16px;height:16px"></i> Quitter plein écran
+  </button>
+</div>
+
+<!-- Bouton fullscreen -->
+<div x-show="sessionId" style="margin-top:0.75rem;text-align:center">
+  <button class="btn btn-ghost" @click="fullscreen=true">
+    <i data-lucide="maximize-2" style="width:16px;height:16px"></i> Mode plein écran
+  </button>
+</div>
+
+</div><!-- /x-data -->
+{% endblock %}
+
+{% block scripts %}
+<script>document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)lucide.createIcons()});</script>
+{% endblock %}

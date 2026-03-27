@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — TT Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+<div class="login-bg" x-data="{
+  tab: 'login',
+  username: '', email: '', password: '', displayName: '',
+  error: '', loading: false,
+
+  async doLogin() {
+    this.error = ''; this.loading = true;
+    try {
+      const r = await fetch('/auth/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username: this.username, password: this.password})
+      });
+      if (!r.ok) { const e = await r.json(); this.error = e.detail || 'Erreur'; return; }
+      location.href = '/dashboard';
+    } catch(e) { this.error = 'Connexion impossible'; }
+    finally { this.loading = false; }
+  },
+
+  async doRegister() {
+    this.error = ''; this.loading = true;
+    try {
+      const r = await fetch('/auth/register', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username: this.username, email: this.email, password: this.password, display_name: this.displayName})
+      });
+      if (!r.ok) { const e = await r.json(); this.error = e.detail || 'Erreur'; return; }
+      this.tab = 'login'; this.error = ''; alert('Compte créé — connectez-vous');
+    } catch(e) { this.error = 'Erreur lors de la création'; }
+    finally { this.loading = false; }
+  },
+
+  async doGuest() {
+    await fetch('/auth/guest', {method: 'POST'});
+    location.href = '/dashboard';
+  }
+}">
+  <div class="login-card animate-in">
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:1.75rem">
+      <div style="font-size:2.5rem">🏓</div>
+      <h1 style="font-size:1.5rem;font-weight:900;letter-spacing:-0.03em;margin-top:0.5rem">TT Tracker</h1>
+      <p style="color:var(--text-muted);font-size:0.875rem;margin-top:0.25rem">Tableau de Ping-Pong Connecté</p>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:4px;background:rgba(255,255,255,0.05);border-radius:8px;padding:3px;margin-bottom:1.5rem">
+      <button @click="tab='login'" class="btn" style="flex:1;justify-content:center;"
+        :style="tab==='login' ? 'background:var(--accent-blue);color:#fff' : 'background:transparent;color:var(--text-muted)'">
+        Connexion
+      </button>
+      <button @click="tab='register'" class="btn" style="flex:1;justify-content:center;"
+        :style="tab==='register' ? 'background:var(--accent-blue);color:#fff' : 'background:transparent;color:var(--text-muted)'">
+        Créer un compte
+      </button>
+    </div>
+
+    <!-- Login form -->
+    <div x-show="tab==='login'" x-transition>
+      <div style="margin-bottom:1rem">
+        <label class="label">Nom d'utilisateur</label>
+        <input class="input" type="text" x-model="username" placeholder="admin" @keyup.enter="doLogin">
+      </div>
+      <div style="margin-bottom:1.25rem">
+        <label class="label">Mot de passe</label>
+        <input class="input" type="password" x-model="password" placeholder="••••••••" @keyup.enter="doLogin">
+      </div>
+      <div x-show="error" x-text="error" style="color:var(--accent-red);font-size:0.85rem;margin-bottom:0.75rem"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" @click="doLogin" :disabled="loading">
+        <span x-text="loading ? 'Connexion...' : 'Se connecter'"></span>
+      </button>
+    </div>
+
+    <!-- Register form -->
+    <div x-show="tab==='register'" x-transition>
+      <div style="margin-bottom:0.75rem">
+        <label class="label">Nom d'utilisateur</label>
+        <input class="input" type="text" x-model="username" placeholder="joueur1">
+      </div>
+      <div style="margin-bottom:0.75rem">
+        <label class="label">Nom affiché</label>
+        <input class="input" type="text" x-model="displayName" placeholder="Jean Dupont">
+      </div>
+      <div style="margin-bottom:0.75rem">
+        <label class="label">Email</label>
+        <input class="input" type="email" x-model="email" placeholder="joueur@exemple.com">
+      </div>
+      <div style="margin-bottom:1.25rem">
+        <label class="label">Mot de passe</label>
+        <input class="input" type="password" x-model="password" placeholder="••••••••">
+      </div>
+      <div x-show="error" x-text="error" style="color:var(--accent-red);font-size:0.85rem;margin-bottom:0.75rem"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" @click="doRegister" :disabled="loading">
+        <span x-text="loading ? 'Création...' : 'Créer mon compte'"></span>
+      </button>
+    </div>
+
+    <!-- Guest -->
+    <div style="margin-top:1rem;text-align:center">
+      <button @click="doGuest" style="background:none;border:none;color:var(--text-muted);font-size:0.8rem;cursor:pointer;text-decoration:underline">
+        Continuer en invité (24h)
+      </button>
+    </div>
+  </div>
+</div>
+<script>document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)lucide.createIcons()});</script>
+</body>
+</html>

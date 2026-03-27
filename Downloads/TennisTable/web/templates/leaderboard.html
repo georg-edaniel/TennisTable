@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Classement ELO — TT Tracker{% endblock %}
+
+{% block content %}
+{% macro elo_badge(rating) %}
+  {% if rating >= 1600 %}
+    <span class="elo-badge elo-diamond">💎 {{ rating | round(0) | int }}</span>
+  {% elif rating >= 1400 %}
+    <span class="elo-badge elo-gold">🥇 {{ rating | round(0) | int }}</span>
+  {% elif rating >= 1200 %}
+    <span class="elo-badge elo-silver">🥈 {{ rating | round(0) | int }}</span>
+  {% else %}
+    <span class="elo-badge elo-bronze">🥉 {{ rating | round(0) | int }}</span>
+  {% endif %}
+{% endmacro %}
+
+<div class="page-header animate-in">
+  <h1 class="page-title">Classement ELO 🏆</h1>
+  <p class="page-subtitle">Classement mondial des joueurs TT Tracker</p>
+</div>
+
+<!-- ── Stats globales ── -->
+<div class="grid-3 animate-in" style="margin-bottom:1.25rem">
+  <div class="stat-card">
+    <div class="stat-label">Top ELO</div>
+    <div class="stat-value">{{ top_elo }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">ELO Moyen</div>
+    <div class="stat-value">{{ avg_elo }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Joueurs classés</div>
+    <div class="stat-value">{{ total_players }}</div>
+  </div>
+</div>
+
+<!-- ── Tableau classement ── -->
+<div class="card animate-in">
+  <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+    <i data-lucide="trophy" style="width:16px;height:16px;color:var(--accent-orange)"></i>
+    Classement des joueurs
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Rang</th>
+          <th>Joueur</th>
+          <th>ELO</th>
+          <th>Matchs</th>
+          <th>V / D</th>
+          <th>Taux %</th>
+          <th>Tendance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in players %}
+        <tr {% if user and p.id == user.id %}style="background:rgba(99,102,241,0.08)"{% endif %}>
+          <td style="font-weight:700;color:var(--text-muted)">
+            {% if loop.index == 1 %}🥇
+            {% elif loop.index == 2 %}🥈
+            {% elif loop.index == 3 %}🥉
+            {% else %}#{{ loop.index }}
+            {% endif %}
+          </td>
+          <td>
+            <div style="font-weight:600">{{ p.display_name or p.username }}</div>
+            {% if user and p.id == user.id %}
+              <span style="font-size:0.72rem;color:var(--accent-blue)">(vous)</span>
+            {% endif %}
+          </td>
+          <td>{{ elo_badge(p.elo_rating) }}</td>
+          <td>{{ p.elo_matches }}</td>
+          <td>
+            <span style="color:var(--accent-green)">{{ p.elo_wins }}</span>
+            /
+            <span style="color:var(--accent-red)">{{ p.elo_matches - p.elo_wins }}</span>
+          </td>
+          <td>
+            {% if p.elo_matches > 0 %}
+              {{ (p.elo_wins / p.elo_matches * 100) | round(1) }}%
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td>
+            {% if p.elo_last_change > 0 %}
+              <span style="color:var(--accent-green)">▲ +{{ p.elo_last_change | round(1) }}</span>
+            {% elif p.elo_last_change < 0 %}
+              <span style="color:var(--accent-red)">▼ {{ p.elo_last_change | round(1) }}</span>
+            {% else %}
+              <span style="color:var(--text-muted)">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if not players %}
+    <div class="empty-state">
+      <span style="font-size:2rem">🏆</span>
+      <span>Aucun joueur classé pour le moment</span>
+      <a href="/match" class="btn btn-primary" style="margin-top:0.5rem">Jouer un match</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)lucide.createIcons();});</script>
+{% endblock %}

@@ -1,0 +1,41 @@
+{
+  "mqtt": {
+    "broker_host": "127.0.0.1",
+    "broker_port": 1883,
+    "client_id": "tabletennis_system",
+    "keepalive": 60,
+    "qos": 2,
+    "topic_data": "tabletennis/data",
+    "topic_startup": "tabletennis/system/startup",
+    "topic_status": "tabletennis/system/status",
+    "topic_reset": "tabletennis/system/reset",
+    "reconnect_delay_min_s": 2,
+    "reconnect_delay_max_s": 60,
+    "reconnect_backoff_factor": 2,
+    "offline_queue_size": 100
+  },
+  "ble": {
+    "stroke_char_uuid": "19B10001-E8F2-537E-4F6C-D104768A1214",
+    "scan_timeout_s": 5,
+    "connect_timeout_s": 15,
+    "retry_delay_s": 3,
+    "retry_delay_max_s": 60,
+    "retry_backoff_factor": 2,
+    "heartbeat_interval_s": 30
+  },
+  "devices": [
+    { "device_name": "TableTennisBat1", "player_name": "Joueur 1", "cooldown_ms": 800 },
+    { "device_name": "TableTennisBat2", "player_name": "Joueur 2", "cooldown_ms": 800 }
+  ],
+  "logging": {
+    "level": "INFO",
+    "log_dir": "logs",
+    "max_bytes": 1048576,
+    "backup_count": 5,
+    "console": true
+  },
+  "stats": {
+    "persist_file": "tabletennis_session.json",
+    "persist_on_stroke": true
+  }
+}

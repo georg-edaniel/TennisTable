@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Utilisateurs — Admin TT Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <h1 class="page-title">Utilisateurs</h1>
+  <p class="page-subtitle">Gestion des comptes — {{ users|length }} utilisateur(s)</p>
+</div>
+
+<div class="card animate-in">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom d'utilisateur</th>
+          <th>Nom affiché</th>
+          <th>Rôle</th>
+          <th>Statut</th>
+          <th>Dernière connexion</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td style="color:var(--text-muted)">#{{ u.id }}</td>
+          <td style="font-weight:600">{{ u.username }}</td>
+          <td>{{ u.display_name or '—' }}</td>
+          <td>
+            <span class="badge {% if u.role == 'admin' %}badge-orange{% elif u.role == 'player' %}badge-blue{% else %}badge-gray{% endif %}">
+              {{ u.role }}
+            </span>
+          </td>
+          <td>
+            {% if u.is_active %}
+              <span class="badge badge-green">Actif</span>
+            {% else %}
+              <span class="badge badge-red">Inactif</span>
+            {% endif %}
+            {% if u.must_change_password %}
+              <span class="badge badge-orange" style="margin-left:4px">MDP requis</span>
+            {% endif %}
+          </td>
+          <td style="font-size:0.8rem;color:var(--text-muted)">
+            {{ u.last_login.strftime('%d/%m %H:%M') if u.last_login else '—' }}
+          </td>
+          <td>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+              {% if u.role != 'admin' %}
+              <button class="btn btn-ghost btn-sm" onclick="toggleRole({{ u.id }}, '{{ u.role }}')">
+                {{ 'Rétrograder' if u.role == 'admin' else 'Promouvoir admin' }}
+              </button>
+              {% endif %}
+              <button class="btn btn-sm {% if u.is_active %}btn-danger{% else %}btn-success{% endif %}"
+                onclick="toggleActive({{ u.id }}, {{ 'false' if u.is_active else 'true' }})">
+                {{ 'Désactiver' if u.is_active else 'Activer' }}
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick="resetPwd({{ u.id }})">
+                Reset MDP
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => { if(window.lucide) lucide.createIcons(); });
+
+async function toggleRole(id, current) {
+  const newRole = current === 'admin' ? 'player' : 'admin';
+  if (!confirm(`Changer le rôle en "${newRole}" ?`)) return;
+  const r = await fetch(`/api/admin/users/${id}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({role: newRole})
+  });
+  if (r.ok) location.reload();
+}
+
+async function toggleActive(id, newState) {
+  const r = await fetch(`/api/admin/users/${id}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({is_active: newState === 'true'})
+  });
+  if (r.ok) location.reload();
+}
+
+async function resetPwd(id) {
+  const r = await fetch(`/api/admin/users/${id}`, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({must_change_password: true})
+  });
+  if (r.ok) alert('Marqué : changement de mot de passe requis');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — TT Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <h1 class="page-title">Dashboard</h1>
+  <p class="page-subtitle">Bienvenue, {{ user.display_name or user.username }}</p>
+</div>
+
+<!-- ── Live stats ── -->
+<div class="grid-4 animate-in" style="margin-bottom:1.25rem"
+  x-data>
+  <div class="stat-card">
+    <div class="stat-label">Coups / min</div>
+    <div class="stat-value" x-text="$store.tennis.strokesPerMin">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Total coups (live)</div>
+    <div class="stat-value" x-text="$store.tennis.liveStrokes.total">0</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Sessions aujourd'hui</div>
+    <div class="stat-value">{{ sessions|length }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Statut BLE</div>
+    <div class="stat-value" style="font-size:1rem;display:flex;align-items:center;gap:8px;margin-top:0.5rem">
+      <span class="dot" :class="$store.tennis.bleConnected ? 'dot-green animate-pulse' : 'dot-gray'"></span>
+      <span x-text="$store.tennis.bleConnected ? 'Connecté' : 'Hors-ligne'"></span>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Classement ELO</div>
+    <div class="stat-value" style="font-size:1.5rem">{{ user.elo_rating | round(0) | int }}</div>
+  </div>
+</div>
+
+<!-- ── Live stroke bars + Actions ── -->
+<div class="grid-2" style="margin-bottom:1.25rem" x-data>
+  <!-- Répartition live -->
+  <div class="card">
+    <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+      <i data-lucide="activity" style="width:16px;height:16px;color:var(--accent-blue)"></i>
+      Répartition live
+    </div>
+    <template x-for="[label, key, color] in [
+      ['BH Drive', 'bh_drive', '#6366f1'],
+      ['BH Smash', 'bh_smash', '#a855f7'],
+      ['FH Drive', 'fh_drive', '#10b981'],
+      ['FH Loop',  'fh_loop',  '#f59e0b'],
+      ['FH Smash', 'fh_smash', '#f43f5e']
+    ]">
+      <div class="stroke-bar-wrap">
+        <span class="stroke-bar-label" x-text="label"></span>
+        <div class="stroke-bar-track">
+          <div class="stroke-bar-fill" :style="`width:${$store.tennis.liveStrokes.total ? ($store.tennis.liveStrokes[key]/$store.tennis.liveStrokes.total*100) : 0}%;background:${color}`"></div>
+        </div>
+        <span class="stroke-bar-count" x-text="$store.tennis.liveStrokes[key]"></span>
+      </div>
+    </template>
+    <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-muted)">
+      Total : <strong x-text="$store.tennis.liveStrokes.total">0</strong>
+    </div>
+  </div>
+
+  <!-- Actions rapides -->
+  <div class="card">
+    <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+      <i data-lucide="play-circle" style="width:16px;height:16px;color:var(--accent-green)"></i>
+      Actions rapides
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.75rem">
+      {% if active_sessions %}
+        <div style="padding:0.75rem;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;font-size:0.85rem;">
+          <span class="dot dot-green animate-pulse" style="margin-right:6px"></span>
+          Session active en cours — ID #{{ active_sessions[0].id }}
+        </div>
+      {% endif %}
+      <a href="/training" class="btn btn-primary btn-lg">
+        <i data-lucide="zap" style="width:18px;height:18px"></i>
+        Démarrer Entraînement
+      </a>
+      <a href="/match" class="btn btn-ghost btn-lg">
+        <i data-lucide="trophy" style="width:18px;height:18px"></i>
+        Démarrer Match
+      </a>
+      <a href="/analysis" class="btn btn-ghost">
+        <i data-lucide="bar-chart-2" style="width:16px;height:16px"></i>
+        Voir mon analyse
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Sessions récentes ── -->
+<div class="card animate-in">
+  <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+    <i data-lucide="clock" style="width:16px;height:16px;color:var(--accent-orange)"></i>
+    Sessions récentes
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Mode</th>
+          <th>Statut</th>
+          <th>Démarré</th>
+          <th>Durée</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sessions %}
+        <tr>
+          <td>#{{ s.id }}</td>
+          <td>
+            <span class="badge {% if s.mode == 'training' %}badge-blue{% else %}badge-orange{% endif %}">
+              {{ s.mode }}
+            </span>
+          </td>
+          <td>
+            <span class="badge {% if s.status == 'active' %}badge-green{% elif s.status == 'completed' %}badge-gray{% else %}badge-red{% endif %}">
+              {{ s.status }}
+            </span>
+          </td>
+          <td style="color:var(--text-muted);font-size:0.8rem">
+            {{ s.started_at.strftime('%d/%m %H:%M') if s.started_at else '—' }}
+          </td>
+          <td>{{ s.duration_s ~ 's' if s.duration_s else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if not sessions %}
+    <div class="empty-state">
+      <span style="font-size:2rem">🏓</span>
+      <span>Aucune session pour le moment</span>
+      <a href="/training" class="btn btn-primary" style="margin-top:0.5rem">Démarrer une session</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)lucide.createIcons()});</script>
+{% endblock %}

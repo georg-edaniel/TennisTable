@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bienvenue — TT Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .onboarding-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:2rem; background:radial-gradient(ellipse at 60% 20%,rgba(99,102,241,0.12) 0%,transparent 60%),var(--bg-primary); }
+    .onboarding-card { width:100%; max-width:560px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:var(--radius-lg); padding:2.5rem 2rem; }
+    .progress-bar-track { height:4px; background:rgba(255,255,255,0.08); border-radius:2px; margin-bottom:2rem; }
+    .progress-bar-fill { height:4px; background:var(--accent-blue); border-radius:2px; transition:width 0.4s ease; }
+    .step-title { font-size:1.4rem; font-weight:900; margin-bottom:0.5rem; }
+    .racket-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:0.75rem; margin-top:0.75rem; }
+    .racket-item { padding:1rem; border:2px solid var(--border); border-radius:var(--radius-md); cursor:pointer; text-align:center; transition:border-color 0.15s,background 0.15s; }
+    .racket-item.selected { border-color:var(--accent-blue); background:rgba(99,102,241,0.1); }
+    .racket-item:hover { border-color:rgba(255,255,255,0.2); }
+  </style>
+</head>
+<body>
+<div class="onboarding-wrap" x-data="{
+  step: 1,
+  totalSteps: 4,
+  displayName: '{{ user.display_name or user.username }}',
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+  selectedRacket: null,
+  loading: false,
+  error: '',
+  mustChangePassword: {{ 'true' if user.must_change_password else 'false' }},
+
+  get progress() { return (this.step / this.totalSteps) * 100; },
+
+  async step1Next() {
+    this.error = '';
+    if (!this.displayName.trim()) { this.error = 'Entrez un nom affiché.'; return; }
+    this.loading = true;
+    try {
+      const r = await fetch('/api/users/me', {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({display_name: this.displayName})
+      });
+      if (!r.ok) throw new Error((await r.json()).detail || 'Erreur');
+      this.step = 2;
+    } catch(e) { this.error = e.message; }
+    finally { this.loading = false; }
+  },
+
+  async step2Next() {
+    this.error = '';
+    if (!this.mustChangePassword) { this.step = 3; return; }
+    if (!this.newPassword) { this.error = 'Entrez un nouveau mot de passe.'; return; }
+    if (this.newPassword !== this.confirmPassword) { this.error = 'Les mots de passe ne correspondent pas.'; return; }
+    this.loading = true;
+    try {
+      const r = await fetch('/auth/change-password', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({old_password: this.oldPassword, new_password: this.newPassword})
+      });
+      if (!r.ok) throw new Error((await r.json()).detail || 'Erreur');
+      this.step = 3;
+    } catch(e) { this.error = e.message; }
+    finally { this.loading = false; }
+  },
+
+  async step3Next() {
+    this.error = '';
+    if (this.selectedRacket) {
+      this.loading = true;
+      try {
+        await fetch('/api/rackets/' + this.selectedRacket + '/assign', {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({user_id: null})
+        });
+      } catch(e) {}
+      finally { this.loading = false; }
+    }
+    this.step = 4;
+  },
+
+  async finish() {
+    this.loading = true;
+    try {
+      await fetch('/api/users/me/onboarding-complete', { method: 'POST' });
+      location.href = '/dashboard';
+    } catch(e) { this.loading = false; }
+  }
+}">
+  <div class="onboarding-card animate-in">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:2rem">🏓</div>
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem">
+        Étape <span x-text="step"></span> sur <span x-text="totalSteps"></span>
+      </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" :style="`width:${progress}%`"></div>
+    </div>
+
+    <!-- Error -->
+    <div x-show="error" x-text="error" style="color:var(--accent-red);font-size:0.875rem;margin-bottom:1rem;padding:0.6rem 0.75rem;background:rgba(244,63,94,0.08);border-radius:6px;border:1px solid rgba(244,63,94,0.2)"></div>
+
+    <!-- Step 1: Display name -->
+    <div x-show="step === 1" x-transition>
+      <div class="step-title">Bienvenue ! 👋</div>
+      <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:1.5rem">Commençons par personnaliser votre profil.</p>
+      <label class="label">Votre nom affiché</label>
+      <input class="input" type="text" x-model="displayName" placeholder="Jean Dupont" @keyup.enter="step1Next">
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:1.25rem" @click="step1Next" :disabled="loading">
+        <span x-text="loading ? 'Enregistrement...' : 'Continuer'"></span>
+        <i data-lucide="arrow-right" style="width:16px;height:16px"></i>
+      </button>
+    </div>
+
+    <!-- Step 2: Change password -->
+    <div x-show="step === 2" x-transition>
+      <div class="step-title">Sécurité 🔐</div>
+      <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:1.5rem" x-text="mustChangePassword ? 'Un changement de mot de passe est requis.' : 'Votre mot de passe est déjà défini. Vous pouvez passer cette étape.'"></p>
+      <div x-show="mustChangePassword">
+        <label class="label">Ancien mot de passe</label>
+        <input class="input" type="password" x-model="oldPassword" placeholder="••••••••" style="margin-bottom:0.75rem">
+        <label class="label">Nouveau mot de passe</label>
+        <input class="input" type="password" x-model="newPassword" placeholder="••••••••" style="margin-bottom:0.75rem">
+        <label class="label">Confirmer le mot de passe</label>
+        <input class="input" type="password" x-model="confirmPassword" placeholder="••••••••">
+      </div>
+      <div style="display:flex;gap:0.75rem;margin-top:1.25rem">
+        <button class="btn btn-ghost" @click="step = 3" style="flex:1;justify-content:center">Passer</button>
+        <button class="btn btn-primary" @click="step2Next" :disabled="loading" style="flex:2;justify-content:center">
+          <span x-text="loading ? 'Vérification...' : 'Continuer'"></span>
+          <i data-lucide="arrow-right" style="width:16px;height:16px"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 3: Racket -->
+    <div x-show="step === 3" x-transition>
+      <div class="step-title">Votre raquette 🏓</div>
+      <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:1rem">Associez une raquette connectée à votre compte (optionnel).</p>
+      <div class="racket-grid">
+        {% for r in rackets %}
+        <div class="racket-item" :class="selectedRacket === {{ r.id }} ? 'selected' : ''"
+             @click="selectedRacket = (selectedRacket === {{ r.id }} ? null : {{ r.id }})">
+          <div style="font-size:1.5rem;margin-bottom:0.4rem">🏓</div>
+          <div style="font-size:0.8rem;font-weight:600">{{ r.label or r.ble_device_name }}</div>
+        </div>
+        {% else %}
+        <div style="color:var(--text-muted);font-size:0.875rem;grid-column:1/-1">Aucune raquette disponible pour le moment.</div>
+        {% endfor %}
+      </div>
+      <div style="display:flex;gap:0.75rem;margin-top:1.25rem">
+        <button class="btn btn-ghost" @click="step = 4" style="flex:1;justify-content:center">Passer</button>
+        <button class="btn btn-primary" @click="step3Next" :disabled="loading" style="flex:2;justify-content:center">
+          <span x-text="loading ? 'Association...' : 'Continuer'"></span>
+          <i data-lucide="arrow-right" style="width:16px;height:16px"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 4: Tour rapide -->
+    <div x-show="step === 4" x-transition>
+      <div class="step-title">Vous êtes prêt ! 🚀</div>
+      <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:1.5rem">Voici un aperçu rapide de l'application.</p>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem">
+        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15);border-radius:8px">
+          <span style="font-size:1.25rem">🎮</span>
+          <div>
+            <div style="font-weight:600;font-size:0.875rem">Entraînement &amp; Match</div>
+            <div style="color:var(--text-muted);font-size:0.8rem">Démarrez une session et suivez vos coups en temps réel.</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:8px">
+          <span style="font-size:1.25rem">📈</span>
+          <div>
+            <div style="font-weight:600;font-size:0.875rem">Analyse</div>
+            <div style="color:var(--text-muted);font-size:0.8rem">Profil de style, radar, évolution et recommandations.</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:8px">
+          <span style="font-size:1.25rem">📤</span>
+          <div>
+            <div style="font-weight:600;font-size:0.875rem">Export</div>
+            <div style="color:var(--text-muted);font-size:0.8rem">Exportez vos stats en PDF ou CSV depuis la page Analyse.</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" @click="finish" :disabled="loading">
+        <span x-text="loading ? 'Chargement...' : 'Démarrer TT Tracker'"></span>
+        <i data-lucide="rocket" style="width:16px;height:16px"></i>
+      </button>
+    </div>
+  </div>
+</div>
+<script>document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)lucide.createIcons()});</script>
+</body>
+</html>

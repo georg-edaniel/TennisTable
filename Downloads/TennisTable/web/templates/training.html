@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Entraînement — TT Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <h1 class="page-title">Entraînement</h1>
+  <p class="page-subtitle">Session solo — suivi des coups en temps réel</p>
+</div>
+
+<div x-data="{
+  sessionId: {{ active_session.id if active_session else 'null' }},
+  racket1Id: {{ active_session.racket1_id if active_session else 'null' }},
+  loading: false,
+
+  async startSession(racketId) {
+    this.loading = true;
+    try {
+      const data = await $store.tennis.apiPost('/sessions/start', {
+        mode: 'training', racket1_id: parseInt(racketId)
+      });
+      this.sessionId = data.id;
+      this.racket1Id = racketId;
+      $store.tennis.resetLive();
+      $store.tennis.startTimer();
+      if (window._ws) window._ws.joinSession(data.id);
+      $store.tennis.notify('Session démarrée !', 'success');
+    } catch(e) { $store.tennis.notify(e.message, 'error'); }
+    finally { this.loading = false; }
+  },
+
+  async stopSession() {
+    if (!this.sessionId) return;
+    this.loading = true;
+    try {
+      await $store.tennis.apiPost('/sessions/' + this.sessionId + '/stop', {});
+
+      $store.tennis.stopTimer();
+      $store.tennis.notify('Session terminée — consultez votre analyse !', 'success');
+      setTimeout(() => location.href='/analysis', 1500);
+    } catch(e) { $store.tennis.notify(e.message, 'error'); }
+    finally { this.loading = false; }
+  }
+}" x-init="
+  if (sessionId) {
+    $store.tennis.startTimer();
+    if (window._ws) window._ws.joinSession(sessionId);
+  }
+">
+
+<!-- ── Si pas de session : formulaire démarrage ── -->
+<div x-show="!sessionId" class="card animate-in" style="max-width:480px;margin-bottom:1.25rem">
+  <div style="font-weight:700;font-size:1.1rem;margin-bottom:1rem">Démarrer une session d'entraînement</div>
+  <div x-data="{racket: ''}">
+    <label class="label">Raquette (device BLE)</label>
+    <select class="input" x-model="racket" style="cursor:pointer">
+      <option value="">— Choisir une raquette —</option>
+      {% for r in rackets %}
+      <option value="{{ r.id }}">{{ r.label or r.ble_device_name }} ({{ r.ble_device_name }})</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-success btn-lg" style="margin-top:1rem;width:100%;justify-content:center"
+      @click="$root.startSession(racket)" :disabled="!racket || $root.loading">
+      <i data-lucide="play" style="width:18px;height:18px"></i>
+      <span x-text="$root.loading ? 'Démarrage...' : 'Démarrer'"></span>
+    </button>
+  </div>
+</div>
+
+<!-- ── Session active ── -->
+<div x-show="sessionId">
+  <!-- Timer + contrôles -->
+  <div class="grid-3" style="margin-bottom:1.25rem">
+    <div class="stat-card">
+      <div class="stat-label">Durée</div>
+      <div class="stat-value" x-text="$store.tennis.formatTime($store.tennis.elapsedSeconds)">00:00</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Coups / min</div>
+      <div class="stat-value" x-text="$store.tennis.strokesPerMin">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total coups</div>
+      <div class="stat-value" x-text="$store.tennis.liveStrokes.total">0</div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:1.25rem">
+    <!-- Barres coups live -->
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+        <i data-lucide="activity" style="width:16px;height:16px;color:var(--accent-blue)"></i>
+        Coups live
+        <span class="dot dot-green animate-pulse" style="margin-left:auto"></span>
+      </div>
+      <template x-for="[label, key, color] in [
+        ['BH Drive', 'bh_drive', '#6366f1'],
+        ['BH Smash', 'bh_smash', '#a855f7'],
+        ['FH Drive', 'fh_drive', '#10b981'],
+        ['FH Loop',  'fh_loop',  '#f59e0b'],
+        ['FH Smash', 'fh_smash', '#f43f5e']
+      ]">
+        <div class="stroke-bar-wrap">
+          <span class="stroke-bar-label" x-text="label"></span>
+          <div class="stroke-bar-track">
+            <div class="stroke-bar-fill"
+              :style="`width:${$store.tennis.liveStrokes.total ? ($store.tennis.liveStrokes[key]/$store.tennis.liveStrokes.total*100) : 0}%;background:${color}`"></div>
+          </div>
+          <span class="stroke-bar-count" x-text="$store.tennis.liveStrokes[key]"></span>
+        </div>
+      </template>
+    </div>
+
+    <!-- Shot favori + Stop -->
+    <div class="card" style="display:flex;flex-direction:column;justify-content:space-between">
+      <div>
+        <div style="font-weight:700;margin-bottom:0.75rem">Shot du moment</div>
+        <div style="font-size:1.5rem;font-weight:800;color:var(--accent-blue)" x-text="
+          (() => {
+            const ls = $store.tennis.liveStrokes;
+            const shots = {
+              'BH Drive': ls.bh_drive, 'BH Smash': ls.bh_smash,
+              'FH Drive': ls.fh_drive, 'FH Loop':  ls.fh_loop, 'FH Smash': ls.fh_smash
+            };
+            return Object.entries(shots).sort(([,a],[,b])=>b-a)[0]?.[0] ?? '—';
+          })()
+        ">—</div>
+        <div style="margin-top:1rem;color:var(--text-muted);font-size:0.875rem">
+          Tip : restez concentré sur la régularité 🎯
+        </div>
+      </div>
+      <button class="btn btn-danger btn-lg" style="width:100%;justify-content:center;margin-top:1.5rem"
+        @click="stopSession" :disabled="loading">
+        <i data-lucide="square" style="width:18px;height:18px"></i>
+        <span x-text="loading ? 'Arrêt...' : 'Arrêter la session'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /x-data -->
+{% endblock %}
+
+{% block scripts %}
+<script>document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)lucide.createIcons()});</script>
+{% endblock %}

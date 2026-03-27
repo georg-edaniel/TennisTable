@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr" x-data>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}TT Tracker{% endblock %}</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS (build purgé — npx tailwindcss -i ... -o tailwind.min.css --minify) -->
+  <link rel="stylesheet" href="/static/css/tailwind.min.css">
+
+  <!-- Design tokens + composants custom -->
+  <link rel="stylesheet" href="/static/css/app.css">
+
+  <!-- Alpine.js (defer so store is init'd before DOM) -->
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+  <!-- ApexCharts -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- App JS (store + WS client) — before Alpine.start -->
+  <script src="/static/js/app.js"></script>
+
+  {% block head %}{% endblock %}
+</head>
+<body class="dark" x-init="
+  $store.tennis.initWS('{{ access_token|default('') }}');
+">
+
+{% if user %}
+<!-- ── Sidebar ── -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <span>🏓</span>
+    <span>TT Tracker</span>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="sidebar-section">Navigation</div>
+    <a href="/dashboard" class="sidebar-link {% if request.url.path == '/dashboard' %}active{% endif %}">
+      <i data-lucide="layout-dashboard" style="width:16px;height:16px"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <div class="sidebar-section" style="margin-top:0.5rem">Jeu</div>
+    <a href="/training" class="sidebar-link {% if request.url.path == '/training' %}active{% endif %}">
+      <i data-lucide="zap" style="width:16px;height:16px"></i>
+      <span>Entraînement</span>
+    </a>
+    <a href="/match" class="sidebar-link {% if request.url.path == '/match' %}active{% endif %}">
+      <i data-lucide="trophy" style="width:16px;height:16px"></i>
+      <span>Match</span>
+    </a>
+    <a href="/leaderboard" class="sidebar-link {% if '/leaderboard' in request.url.path %}active{% endif %}">
+      <i data-lucide="award" style="width:16px;height:16px"></i>
+      <span>Classement</span>
+    </a>
+
+    <div class="sidebar-section" style="margin-top:0.5rem">Données</div>
+    <a href="/analysis" class="sidebar-link {% if request.url.path == '/analysis' %}active{% endif %}">
+      <i data-lucide="bar-chart-2" style="width:16px;height:16px"></i>
+      <span>Analyse</span>
+    </a>
+    <a href="/rackets" class="sidebar-link {% if request.url.path == '/rackets' %}active{% endif %}">
+      <i data-lucide="circle" style="width:16px;height:16px"></i>
+      <span>Raquettes</span>
+    </a>
+
+    {% if user.role == 'admin' %}
+    <div class="sidebar-section" style="margin-top:0.5rem">Admin</div>
+    <a href="/admin/users" class="sidebar-link {% if '/admin' in request.url.path %}active{% endif %}">
+      <i data-lucide="users" style="width:16px;height:16px"></i>
+      <span>Utilisateurs</span>
+    </a>
+    {% endif %}
+  </nav>
+
+  <div class="sidebar-footer">
+    <!-- BLE status -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.75rem;font-size:0.8rem;">
+      <span class="dot" :class="$store.tennis.bleConnected ? 'dot-green animate-pulse' : 'dot-gray'"></span>
+      <span x-text="$store.tennis.bleConnected ? 'BLE connecté' : 'BLE déconnecté'" style="color:var(--text-muted)"></span>
+    </div>
+    <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;font-weight:600;">
+      {{ user.display_name or user.username }}
+      <span class="badge badge-{% if user.role == 'admin' %}orange{% elif user.role == 'player' %}blue{% else %}gray{% endif %}" style="margin-left:4px">
+        {{ user.role }}
+      </span>
+    </div>
+    {% if user.elo_matches > 0 %}
+      {% set r = user.elo_rating %}
+      {% if r >= 1600 %}
+        <span class="elo-badge elo-diamond" style="margin-bottom:0.4rem">💎 {{ r | round(0) | int }}</span>
+      {% elif r >= 1400 %}
+        <span class="elo-badge elo-gold" style="margin-bottom:0.4rem">🥇 {{ r | round(0) | int }}</span>
+      {% elif r >= 1200 %}
+        <span class="elo-badge elo-silver" style="margin-bottom:0.4rem">🥈 {{ r | round(0) | int }}</span>
+      {% else %}
+        <span class="elo-badge elo-bronze" style="margin-bottom:0.4rem">🥉 {{ r | round(0) | int }}</span>
+      {% endif %}
+    {% else %}
+      <span style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.4rem">ELO 1500 — Débutant</span>
+    {% endif %}
+    <a href="/change-password" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-bottom:0.4rem">
+      <i data-lucide="key" style="width:14px;height:14px"></i>
+      <span>Mot de passe</span>
+    </a>
+    <a href="/login" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location='/login');return false;"
+       class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">
+      <i data-lucide="log-out" style="width:14px;height:14px"></i>
+      <span>Déconnexion</span>
+    </a>
+  </div>
+</aside>
+
+<!-- ── Notifications ── -->
+<div style="position:fixed;top:1rem;right:1rem;z-index:999;display:flex;flex-direction:column;gap:8px;">
+  <template x-for="n in $store.tennis.notifications" :key="n.id">
+    <div class="card animate-in" style="padding:0.6rem 1rem;font-size:0.85rem;min-width:200px;"
+         :class="{'toast-success':n.type==='success','toast-error':n.type==='error','toast-info':n.type==='info'}">
+      <span x-text="n.text"></span>
+    </div>
+  </template>
+</div>
+
+{% endif %}
+
+<!-- ── Main ── -->
+<main class="{% if user %}main-content{% endif %}">
+  {% block content %}{% endblock %}
+</main>
+
+<script>
+  // Init Lucide icons after DOM
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide) lucide.createIcons();
+  });
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "tennistable",
+  "version": "1.0.0",
+  "description": "Système de suivi en temps réel pour match de tennis de table, utilisant des raquettes connectées (Arduino Nano 33 BLE Rev 2), un bridge Python BLE→MQTT, et un dashboard Node-RED.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:css": "tailwindcss -i web/static/css/tailwind.src.css -o web/static/css/tailwind.min.css --minify",
+    "watch:css": "tailwindcss -i web/static/css/tailwind.src.css -o web/static/css/tailwind.min.css --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

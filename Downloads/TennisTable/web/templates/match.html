@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Match — TT Tracker{% endblock %}
+{% block title %}{{ t('nav.match') }} — TT Tracker{% endblock %}
 
 {% block content %}
 <div class="page-header animate-in">
-  <h1 class="page-title">Match</h1>
-  <p class="page-subtitle">Mode compétition — score et coups en temps réel</p>
+  <h1 class="page-title">{{ t('nav.match') }}</h1>
+  <p class="page-subtitle">{{ t('match.subtitle') }}</p>
 </div>
 
 <div x-data="{
@@ -16,21 +16,39 @@
   loading: false,
   fullscreen: false,
   scoreChanged: false,
+  matchFormat: '3',
+  firstServer: '1',
+  bestOf: {{ active_session.best_of if active_session else 3 }},
+  serverId: {{ active_session.server_id or 'null' if active_session else 'null' }},
+  player1Id: {{ active_session.player1_id if active_session else 0 }},
+  deuceActive: {{ 'true' if active_session and active_session.deuce_active else 'false' }},
+  showFinalSetAlert: false,
+  showRallyOverlay: false,
+  rallyTimerHandle: null,
 
-  async startSession(r1, r2) {
+  async startSession(slots) {
+    const ids = slots.filter(r => r).map(r => parseInt(r));
+    if (!ids.length) { $store.tennis.notify('Choisissez au moins une raquette.', 'error'); return; }
     this.loading = true;
     try {
       const data = await $store.tennis.apiPost('/sessions/start', {
         mode: 'match',
-        racket1_id: parseInt(r1),
-        racket2_id: r2 ? parseInt(r2) : null,
+        racket_ids: ids,
+        best_of: parseInt(this.matchFormat),
+        first_server: parseInt(this.firstServer),
       });
       this.sessionId = data.id;
       this.p1Score = 0; this.p2Score = 0; this.p1Sets = 0; this.p2Sets = 0;
+      this.bestOf = data.best_of || 3;
+      this.serverId = data.server_id;
+      this.player1Id = data.player1_id;
+      this.deuceActive = false;
+      $store.tennis.currentSessionId = data.id;
       $store.tennis.resetLive();
       $store.tennis.startTimer();
       if (window._ws) window._ws.joinSession(data.id);
       $store.tennis.notify('Match démarré !', 'success');
+      this.resetRallyTimer();
     } catch(e) { $store.tennis.notify(e.message, 'error'); }
     finally { this.loading = false; }
   },
@@ -40,6 +58,7 @@
     const r = await fetch('/api/sessions/' + this.sessionId + '/score', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
+      credentials: 'include',
       body: JSON.stringify({player, action})
     });
     const data = await r.json();
@@ -47,50 +66,194 @@
     this.p2Score = data.p2_score;
     this.p1Sets  = data.p1_sets_won;
     this.p2Sets  = data.p2_sets_won;
+    this.serverId = data.server_id;
+    this.deuceActive = data.deuce_active;
     this.scoreChanged = true;
     setTimeout(() => this.scoreChanged = false, 400);
+    if (data.final_set_alert) {
+      this.showFinalSetAlert = true;
+      setTimeout(() => this.showFinalSetAlert = false, 6000);
+    }
+    if (data.status === 'completed' && data.winner_id) {
+      const w = data.winner_id === this.player1Id ? 'Joueur 1' : 'Joueur 2';
+      $store.tennis.notify('Match terminé — ' + w + ' gagne !', 'success');
+      const sid = this.sessionId;
+      setTimeout(() => location.href = '/analysis?session_id=' + sid, 2000);
+    }
+    this.resetRallyTimer();
+  },
+
+  resetRallyTimer() {
+    if (this.rallyTimerHandle) clearTimeout(this.rallyTimerHandle);
+    this.showRallyOverlay = false;
+    this.rallyTimerHandle = setTimeout(() => {
+      if (this.sessionId) this.showRallyOverlay = true;
+    }, 8000);
   },
 
   async stopMatch() {
     if (!this.sessionId) return;
     this.loading = true;
+    const sid = this.sessionId;
     try {
-      await $store.tennis.apiPost('/sessions/' + this.sessionId + '/stop', {});
+      await $store.tennis.apiPost('/sessions/' + sid + '/stop', {});
+      $store.tennis.currentSessionId = null;
       $store.tennis.stopTimer();
+      if (this.rallyTimerHandle) clearTimeout(this.rallyTimerHandle);
       $store.tennis.notify('Match terminé !', 'success');
-      setTimeout(() => location.href='/analysis', 1500);
+      setTimeout(() => location.href='/analysis?session_id=' + sid, 1500);
     } catch(e) { $store.tennis.notify(e.message,'error'); }
     finally { this.loading = false; }
   }
 }" x-init="
   if (sessionId) {
+    $store.tennis.currentSessionId = sessionId;
     $store.tennis.startTimer();
     if (window._ws) window._ws.joinSession(sessionId);
+    this.resetRallyTimer();
+    window.addEventListener('tt-stroke', () => this.resetRallyTimer());
   }
 ">
 
 <!-- Démarrage -->
 <div x-show="!sessionId" class="card animate-in" style="max-width:520px;margin-bottom:1.25rem">
-  <div style="font-weight:700;font-size:1.1rem;margin-bottom:1rem">Configurer le match</div>
-  <div x-data="{r1:'',r2:''}">
-    <label class="label">Raquette Joueur 1</label>
-    <select class="input" x-model="r1" style="cursor:pointer;margin-bottom:0.75rem">
-      <option value="">— Raquette 1 —</option>
-      {% for r in rackets %}
-      <option value="{{ r.id }}">{{ r.label or r.ble_device_name }}</option>
-      {% endfor %}
-    </select>
-    <label class="label">Raquette Joueur 2 (optionnel)</label>
-    <select class="input" x-model="r2" style="cursor:pointer;margin-bottom:1rem">
-      <option value="">— Raquette 2 (optionnel) —</option>
-      {% for r in rackets %}
-      <option value="{{ r.id }}">{{ r.label or r.ble_device_name }}</option>
-      {% endfor %}
-    </select>
+  <div style="font-weight:700;font-size:1.1rem;margin-bottom:1rem">{{ t('match.setup_title') }}</div>
+  <div x-data="{slots: ['', ''], addSlot() { this.slots.push(''); }, removeSlot(i) { if(this.slots.length>1) this.slots.splice(i,1); }}">
+    <label class="label">{{ t('match.rackets_label') }}</label>
+    <template x-for="(v, i) in slots" :key="i">
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center">
+        <span style="font-size:0.8rem;color:var(--text-muted);min-width:60px;font-weight:600"
+              x-text="'Joueur ' + (i+1)"></span>
+        <select class="input" style="flex:1;cursor:pointer"
+                @change="slots[i] = $event.target.value">
+          <option value="">{{ t('match.racket_optional') }}</option>
+          {% for r in rackets %}
+          <option value="{{ r.id }}">{{ r.label or r.ble_device_name }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-ghost" style="padding:0.4rem 0.6rem;flex-shrink:0"
+                @click="removeSlot(i)" :disabled="slots.length <= 2"
+                title="Retirer">✕</button>
+      </div>
+    </template>
+    <button class="btn btn-ghost btn-sm" style="margin-bottom:1rem" @click="addSlot">
+      <i data-lucide="plus" style="width:14px;height:14px"></i>
+      {{ t('match.add_player') }}
+    </button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
+      <div>
+        <label class="label">{{ t('match.format') }}</label>
+        <select class="input" x-model="$root.matchFormat">
+          <option value="3">{{ t('match.bo3') }}</option>
+          <option value="5">{{ t('match.bo5') }}</option>
+          <option value="7">{{ t('match.bo7') }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="label">{{ t('match.first_server') }}</label>
+        <select class="input" x-model="$root.firstServer">
+          <option value="1">{{ t('match.player1') }}</option>
+          <option value="2">{{ t('match.player2') }}</option>
+        </select>
+      </div>
+    </div>
     <button class="btn btn-success btn-lg" style="width:100%;justify-content:center"
-      @click="$root.startSession(r1, r2)" :disabled="!r1 || $root.loading">
+      @click="$root.startSession(slots)" :disabled="$root.loading">
       <i data-lucide="play" style="width:18px;height:18px"></i>
-      <span x-text="$root.loading ? 'Démarrage...' : 'Démarrer le match'"></span>
+      <span x-text="$root.loading ? '{{ t('common.starting') }}' : '{{ t('match.start_btn') }}'"></span>
+    </button>
+    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem">
+      {{ t('match.player_note') }}
+    </p>
+  </div>
+</div>
+
+<!-- ── Saisie manuelle d'un résultat ── -->
+<div x-show="!sessionId" x-data="{
+  open: false,
+  loading: false,
+  p1Sets: 0,
+  p2Sets: 0,
+  opponentId: '',
+  opponentName: '',
+  notes: '',
+  users: [],
+  async loadUsers() {
+    if (this.users.length) return;
+    const r = await fetch('/api/users/list', {credentials:'include'});
+    if (r.ok) this.users = await r.json();
+  },
+  async submit() {
+    this.loading = true;
+    try {
+      const body = {
+        p1_sets: parseInt(this.p1Sets) || 0,
+        p2_sets: parseInt(this.p2Sets) || 0,
+        player2_id: this.opponentId ? parseInt(this.opponentId) : null,
+        opponent_name: this.opponentName || null,
+        notes: this.notes || null,
+      };
+      const r = await fetch('/api/sessions/manual-match', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        credentials: 'include',
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error((await r.json()).detail || 'Erreur');
+      const sess = await r.json();
+      $store.tennis._notify('Résultat enregistré !', 'success');
+      setTimeout(() => location.href='/analysis?session_id=' + sess.id, 1200);
+    } catch(e) { $store.tennis._notify(e.message, 'error'); }
+    finally { this.loading = false; }
+  }
+}" class="card animate-in" style="max-width:520px;margin-bottom:1.25rem;border:1px solid rgba(99,102,241,0.2)">
+  <button @click="open = !open; if(open) loadUsers()"
+          style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;color:inherit;padding:0">
+    <div style="font-weight:700;font-size:0.95rem;display:flex;align-items:center;gap:8px">
+      <i data-lucide="pencil" style="width:15px;height:15px;color:var(--accent-blue)"></i>
+      {{ t('match.manual_title') }}
+    </div>
+    <i data-lucide="chevron-down" :style="open ? 'transform:rotate(180deg)' : ''"
+       style="width:16px;height:16px;color:var(--text-muted);transition:transform 0.2s"></i>
+  </button>
+
+  <div x-show="open" x-transition style="margin-top:1rem">
+    <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem">
+      {{ t('match.manual_desc') }}
+    </p>
+
+    <!-- Score sets -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
+      <div>
+        <label class="label">{{ t('match.your_sets') }}</label>
+        <input class="input" type="number" min="0" max="9" x-model="p1Sets" placeholder="ex: 3">
+      </div>
+      <div>
+        <label class="label">{{ t('match.opp_sets') }}</label>
+        <input class="input" type="number" min="0" max="9" x-model="p2Sets" placeholder="ex: 1">
+      </div>
+    </div>
+
+    <!-- Adversaire -->
+    <label class="label">{{ t('match.opponent') }}</label>
+    <select class="input" style="margin-bottom:0.5rem" x-model="opponentId">
+      <option value="">{{ t('match.select_player') }}</option>
+      <template x-for="u in users" :key="u.id">
+        <option :value="u.id" x-text="u.display_name"></option>
+      </template>
+    </select>
+    <input class="input" type="text" x-model="opponentName" placeholder="Ou tapez un nom libre…"
+           style="margin-bottom:0.75rem" :disabled="!!opponentId">
+
+    <!-- Notes -->
+    <label class="label">{{ t('match.notes_label') }}</label>
+    <input class="input" type="text" x-model="notes" placeholder="Ex: Club de Lyon, tournée amicale…"
+           style="margin-bottom:1rem">
+
+    <button class="btn btn-primary" style="width:100%;justify-content:center"
+            @click="submit" :disabled="loading || (p1Sets == p2Sets && p1Sets == 0)">
+      <i data-lucide="save" style="width:15px;height:15px"></i>
+      <span x-text="loading ? '{{ t('match.saving') }}' : '{{ t('match.save_result') }}'"></span>
     </button>
   </div>
 </div>
@@ -109,6 +272,23 @@
       <div>
         <div style="font-size:0.75rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em">J2 — Sets</div>
         <div style="font-size:2rem;font-weight:900;color:var(--accent-red)" x-text="p2Sets">0</div>
+      </div>
+    </div>
+
+    <!-- Indicateur serveur + déuce -->
+    <div style="display:flex;justify-content:center;gap:0.75rem;margin-bottom:0.5rem;flex-wrap:wrap;align-items:center">
+      <template x-if="serverId">
+        <div style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:20px;font-size:0.8rem;font-weight:700;color:#a5b4fc">
+          🏓 <span x-text="serverId === player1Id ? 'J1 sert' : 'J2 sert'"></span>
+        </div>
+      </template>
+      <template x-if="deuceActive">
+        <div style="display:inline-flex;align-items:center;padding:4px 12px;background:rgba(244,63,94,0.15);border:1px solid rgba(244,63,94,0.4);border-radius:20px;font-size:0.8rem;font-weight:800;color:#fb7185;letter-spacing:0.05em">
+          DÉUCE
+        </div>
+      </template>
+      <div style="color:var(--text-muted);font-size:0.8rem;font-weight:600">
+        BO<span x-text="bestOf"></span>
       </div>
     </div>
 
@@ -143,11 +323,11 @@
     </div>
     <div style="display:flex;gap:0.75rem;justify-content:center">
       <button class="btn btn-ghost" @click="score(1,'new_set')">
-        <i data-lucide="flag" style="width:16px;height:16px"></i> Nouveau set
+        <i data-lucide="flag" style="width:16px;height:16px"></i> {{ t('match.new_set') }}
       </button>
       <button class="btn btn-danger" @click="stopMatch" :disabled="loading">
         <i data-lucide="square" style="width:16px;height:16px"></i>
-        <span x-text="loading ? 'Fin...' : 'Terminer le match'"></span>
+        <span x-text="loading ? '{{ t('match.ending') }}' : '{{ t('match.end_match') }}'"></span>
       </button>
     </div>
   </div>
@@ -155,15 +335,31 @@
   <!-- Coups live -->
   <div class="grid-2">
     <div class="card">
-      <div style="font-weight:700;margin-bottom:0.75rem">Timer</div>
+      <div style="font-weight:700;margin-bottom:0.75rem">{{ t('match.timer') }}</div>
       <div style="font-size:3rem;font-weight:900;letter-spacing:-0.04em" x-text="$store.tennis.formatTime($store.tennis.elapsedSeconds)">00:00</div>
       <div style="margin-top:0.5rem;color:var(--text-muted);font-size:0.8rem">
         <span x-text="$store.tennis.strokesPerMin"></span> coups/min
       </div>
+      <!-- BLE connect shortcut -->
+      <div x-data style="margin-top:0.75rem">
+        <template x-if="!$store.tennis.webBleConnected">
+          <button @click="$store.tennis.connectBLE()" class="btn btn-ghost btn-sm"
+                  style="width:100%;justify-content:center;border:1px solid rgba(99,102,241,0.4);color:var(--accent-blue)">
+            <i data-lucide="bluetooth" style="width:14px;height:14px"></i>
+            {{ t('match.connect_racket') }}
+          </button>
+        </template>
+        <template x-if="$store.tennis.webBleConnected">
+          <div style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:#10b981;font-weight:600">
+            <span class="dot dot-green animate-pulse" style="width:8px;height:8px;min-width:8px;border-radius:50%;background:#10b981"></span>
+            <span x-text="$store.tennis.webBleDevice || 'Raquette connectée'"></span>
+          </div>
+        </template>
+      </div>
     </div>
     <div class="card">
       <div style="font-weight:700;margin-bottom:0.75rem;display:flex;align-items:center;gap:8px">
-        Coups live <span class="dot dot-green animate-pulse" style="margin-left:auto"></span>
+        {{ t('match.live_strokes') }} <span class="dot dot-green animate-pulse" style="margin-left:auto"></span>
       </div>
       <template x-for="[label, key, color] in [
         ['BH Drive','bh_drive','#6366f1'],['BH Smash','bh_smash','#a855f7'],
@@ -186,7 +382,7 @@
 <!-- Fullscreen mode -->
 <div class="match-fullscreen" x-show="fullscreen" x-transition>
   <div style="text-align:center">
-    <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem">Tap pour marquer point</div>
+    <div style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem">{{ t('match.tap_to_score') }}</div>
     <div style="display:flex;gap:2rem;align-items:center">
       <button class="fullscreen-score-btn" @click="score(1,'point')">
         <div style="font-size:min(10rem,25vw);font-weight:900;color:var(--accent-blue);line-height:1" x-text="p1Score">0</div>
@@ -200,14 +396,45 @@
     </div>
   </div>
   <button class="btn btn-ghost" @click="fullscreen=false">
-    <i data-lucide="minimize-2" style="width:16px;height:16px"></i> Quitter plein écran
+    <i data-lucide="minimize-2" style="width:16px;height:16px"></i> {{ t('match.exit_fullscreen') }}
   </button>
 </div>
 
 <!-- Bouton fullscreen -->
 <div x-show="sessionId" style="margin-top:0.75rem;text-align:center">
   <button class="btn btn-ghost" @click="fullscreen=true">
-    <i data-lucide="maximize-2" style="width:16px;height:16px"></i> Mode plein écran
+    <i data-lucide="maximize-2" style="width:16px;height:16px"></i> {{ t('match.fullscreen') }}
+  </button>
+</div>
+
+<!-- Alerte changement de côté (set décisif, 5e point) -->
+<div x-show="showFinalSetAlert" x-transition
+     style="position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:200;
+            background:linear-gradient(135deg,#f59e0b,#f43f5e);color:#fff;font-weight:800;
+            padding:16px 28px;border-radius:14px;text-align:center;pointer-events:none;
+            box-shadow:0 8px 32px rgba(0,0,0,0.4)">
+  {{ t('match.side_change') }}<br>
+  <span style="font-size:0.85rem;font-weight:500">{{ t('match.side_change_sub') }}</span>
+</div>
+
+<!-- Overlay rally terminé (8 s sans coup) -->
+<div x-show="showRallyOverlay" x-transition
+     style="position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:300;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2rem">
+  <div style="font-size:1.5rem;font-weight:800;color:#fff;text-align:center">
+    {{ t('match.rally_ended') }}
+  </div>
+  <div style="display:flex;gap:2rem">
+    <button class="btn btn-primary"
+            style="font-size:2rem;padding:1.5rem 3rem;border-radius:20px;min-width:120px"
+            @click="score(1,'point'); showRallyOverlay=false; resetRallyTimer()">J1</button>
+    <button style="background:var(--accent-red);color:#fff;border:none;cursor:pointer;
+                   font-size:2rem;padding:1.5rem 3rem;border-radius:20px;min-width:120px;font-weight:800"
+            @click="score(2,'point'); showRallyOverlay=false; resetRallyTimer()">J2</button>
+  </div>
+  <button class="btn btn-ghost" style="color:rgba(255,255,255,0.6)"
+          @click="showRallyOverlay=false; resetRallyTimer()">
+    {{ t('match.rally_cancel') }}
   </button>
 </div>
 

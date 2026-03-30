@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Entraînement — TT Tracker{% endblock %}
+{% block title %}{{ t('training.title') }} — TT Tracker{% endblock %}
 
 {% block content %}
 <div class="page-header animate-in">
-  <h1 class="page-title">Entraînement</h1>
-  <p class="page-subtitle">Session solo — suivi des coups en temps réel</p>
+  <h1 class="page-title">{{ t('training.title') }}</h1>
+  <p class="page-subtitle">{{ t('training.subtitle') }}</p>
 </div>
 
 <div x-data="{
@@ -12,14 +12,17 @@
   racket1Id: {{ active_session.racket1_id if active_session else 'null' }},
   loading: false,
 
-  async startSession(racketId) {
+  async startSession(racketIds) {
+    const ids = racketIds.filter(r => r).map(r => parseInt(r));
+    if (!ids.length) { $store.tennis.notify('{{ t('training.rackets') }} !', 'error'); return; }
     this.loading = true;
     try {
       const data = await $store.tennis.apiPost('/sessions/start', {
-        mode: 'training', racket1_id: parseInt(racketId)
+        mode: 'training', racket_ids: ids
       });
       this.sessionId = data.id;
-      this.racket1Id = racketId;
+      this.racket1Id = ids[0];
+      $store.tennis.currentSessionId = data.id;
       $store.tennis.resetLive();
       $store.tennis.startTimer();
       if (window._ws) window._ws.joinSession(data.id);
@@ -31,17 +34,19 @@
   async stopSession() {
     if (!this.sessionId) return;
     this.loading = true;
+    const sid = this.sessionId;
     try {
-      await $store.tennis.apiPost('/sessions/' + this.sessionId + '/stop', {});
-
+      await $store.tennis.apiPost('/sessions/' + sid + '/stop', {});
+      $store.tennis.currentSessionId = null;
       $store.tennis.stopTimer();
       $store.tennis.notify('Session terminée — consultez votre analyse !', 'success');
-      setTimeout(() => location.href='/analysis', 1500);
+      setTimeout(() => location.href='/analysis?session_id=' + sid, 1500);
     } catch(e) { $store.tennis.notify(e.message, 'error'); }
     finally { this.loading = false; }
   }
 }" x-init="
   if (sessionId) {
+    $store.tennis.currentSessionId = sessionId;
     $store.tennis.startTimer();
     if (window._ws) window._ws.joinSession(sessionId);
   }
@@ -49,19 +54,31 @@
 
 <!-- ── Si pas de session : formulaire démarrage ── -->
 <div x-show="!sessionId" class="card animate-in" style="max-width:480px;margin-bottom:1.25rem">
-  <div style="font-weight:700;font-size:1.1rem;margin-bottom:1rem">Démarrer une session d'entraînement</div>
-  <div x-data="{racket: ''}">
-    <label class="label">Raquette (device BLE)</label>
-    <select class="input" x-model="racket" style="cursor:pointer">
-      <option value="">— Choisir une raquette —</option>
-      {% for r in rackets %}
-      <option value="{{ r.id }}">{{ r.label or r.ble_device_name }} ({{ r.ble_device_name }})</option>
-      {% endfor %}
-    </select>
-    <button class="btn btn-success btn-lg" style="margin-top:1rem;width:100%;justify-content:center"
-      @click="$root.startSession(racket)" :disabled="!racket || $root.loading">
+  <div style="font-weight:700;font-size:1.1rem;margin-bottom:1rem">{{ t('training.start_title') }}</div>
+  <div x-data="{slots: [''], addSlot() { this.slots.push(''); }, removeSlot(i) { if(this.slots.length>1) this.slots.splice(i,1); }}">
+    <label class="label">{{ t('training.rackets') }}</label>
+    <template x-for="(v, i) in slots" :key="i">
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center">
+        <select class="input" style="flex:1;cursor:pointer"
+                @change="slots[i] = $event.target.value">
+          <option value="" x-text="'— Raquette ' + (i+1) + ' —'"></option>
+          {% for r in rackets %}
+          <option value="{{ r.id }}">{{ r.label or r.ble_device_name }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-ghost" style="padding:0.4rem 0.6rem;flex-shrink:0"
+                @click="removeSlot(i)" :disabled="slots.length === 1"
+                title="Retirer">✕</button>
+      </div>
+    </template>
+    <button class="btn btn-ghost btn-sm" style="margin-bottom:1rem" @click="addSlot">
+      <i data-lucide="plus" style="width:14px;height:14px"></i>
+      {{ t('training.add_racket') }}
+    </button>
+    <button class="btn btn-success btn-lg" style="width:100%;justify-content:center"
+      @click="$root.startSession(slots)" :disabled="!slots[0] || $root.loading">
       <i data-lucide="play" style="width:18px;height:18px"></i>
-      <span x-text="$root.loading ? 'Démarrage...' : 'Démarrer'"></span>
+      <span x-text="$root.loading ? '{{ t('common.starting') }}' : '{{ t('common.start') }}'"></span>
     </button>
   </div>
 </div>
@@ -71,15 +88,15 @@
   <!-- Timer + contrôles -->
   <div class="grid-3" style="margin-bottom:1.25rem">
     <div class="stat-card">
-      <div class="stat-label">Durée</div>
+      <div class="stat-label">{{ t('stat.duration') }}</div>
       <div class="stat-value" x-text="$store.tennis.formatTime($store.tennis.elapsedSeconds)">00:00</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Coups / min</div>
+      <div class="stat-label">{{ t('stat.strokes_min') }}</div>
       <div class="stat-value" x-text="$store.tennis.strokesPerMin">0</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Total coups</div>
+      <div class="stat-label">{{ t('stat.total_strokes') }}</div>
       <div class="stat-value" x-text="$store.tennis.liveStrokes.total">0</div>
     </div>
   </div>
@@ -89,7 +106,7 @@
     <div class="card">
       <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
         <i data-lucide="activity" style="width:16px;height:16px;color:var(--accent-blue)"></i>
-        Coups live
+        {{ t('training.live_label') }}
         <span class="dot dot-green animate-pulse" style="margin-left:auto"></span>
       </div>
       <template x-for="[label, key, color] in [
@@ -113,7 +130,23 @@
     <!-- Shot favori + Stop -->
     <div class="card" style="display:flex;flex-direction:column;justify-content:space-between">
       <div>
-        <div style="font-weight:700;margin-bottom:0.75rem">Shot du moment</div>
+        <div style="font-weight:700;margin-bottom:0.75rem">{{ t('training.shot_moment') }}</div>
+        <!-- BLE connect shortcut -->
+        <div x-data style="margin-bottom:0.75rem">
+          <template x-if="!$store.tennis.webBleConnected">
+            <button @click="$store.tennis.connectBLE()" class="btn btn-ghost btn-sm"
+                    style="width:100%;justify-content:center;border:1px solid rgba(99,102,241,0.4);color:var(--accent-blue)">
+              <i data-lucide="bluetooth" style="width:14px;height:14px"></i>
+              {{ t('training.connect_racket') }}
+            </button>
+          </template>
+          <template x-if="$store.tennis.webBleConnected">
+            <div style="display:flex;align-items:center;gap:6px;font-size:0.8rem;color:#10b981;font-weight:600">
+              <span class="dot dot-green animate-pulse" style="width:8px;height:8px;min-width:8px;border-radius:50%;background:#10b981"></span>
+              <span x-text="$store.tennis.webBleDevice || 'Raquette connectée'"></span>
+            </div>
+          </template>
+        </div>
         <div style="font-size:1.5rem;font-weight:800;color:var(--accent-blue)" x-text="
           (() => {
             const ls = $store.tennis.liveStrokes;
@@ -125,13 +158,37 @@
           })()
         ">—</div>
         <div style="margin-top:1rem;color:var(--text-muted);font-size:0.875rem">
-          Tip : restez concentré sur la régularité 🎯
+          {{ t('training.tip') }}
+        </div>
+
+        <!-- Prédiction prochain coup (Markov) -->
+        <div x-data="{ predicted: null }"
+             x-init="$watch('$store.tennis.liveStrokes.total', async (total) => {
+               if (total > 5 && !predicted) {
+                 const ls = $store.tennis.liveStrokes;
+                 const shots = {bh_drive:ls.bh_drive,bh_smash:ls.bh_smash,fh_drive:ls.fh_drive,fh_loop:ls.fh_loop,fh_smash:ls.fh_smash};
+                 const last = Object.entries(shots).sort(([,a],[,b])=>b-a)[0]?.[0] ?? 'fh_drive';
+                 try {
+                   const r = await fetch('/api/analysis/shot-prediction/{{ user.id }}?last_shot='+last, {credentials:'include'});
+                   if (r.ok) { const d = await r.json(); predicted = d.predicted_label; }
+                 } catch(e) {}
+               }
+             })">
+          <template x-if="predicted">
+            <div style="margin-top:0.75rem;padding:0.6rem 0.75rem;background:rgba(245,158,11,0.08);
+                        border:1px solid rgba(245,158,11,0.2);border-radius:8px">
+              <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em">
+                {{ t('training.predicted_shot') }}
+              </div>
+              <div style="font-size:1.1rem;font-weight:800;color:#f59e0b" x-text="predicted"></div>
+            </div>
+          </template>
         </div>
       </div>
       <button class="btn btn-danger btn-lg" style="width:100%;justify-content:center;margin-top:1.5rem"
         @click="stopSession" :disabled="loading">
         <i data-lucide="square" style="width:18px;height:18px"></i>
-        <span x-text="loading ? 'Arrêt...' : 'Arrêter la session'"></span>
+        <span x-text="loading ? '{{ t('training.stopping') }}' : '{{ t('training.stop') }}'"></span>
       </button>
     </div>
   </div>

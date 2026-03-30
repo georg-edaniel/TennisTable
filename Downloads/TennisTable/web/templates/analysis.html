@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Analyse — TT Tracker{% endblock %}
+{% block title %}{{ t('analysis.title') }} — TT Tracker{% endblock %}
 
 {% block head %}
 <style>
@@ -10,8 +10,8 @@
 {% block content %}
 <div class="page-header animate-in" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
   <div>
-    <h1 class="page-title">Analyse</h1>
-    <p class="page-subtitle">Profil de jeu, évolution et recommandations</p>
+    <h1 class="page-title">{{ t('analysis.title') }}</h1>
+    <p class="page-subtitle">{{ t('analysis.subtitle') }}</p>
   </div>
   <div style="display:flex;gap:0.75rem">
     <a href="/api/analysis/export/pdf/{{ user.id }}" download class="btn btn-ghost">
@@ -23,12 +23,31 @@
   </div>
 </div>
 
+{% if post_session_id %}
+<div class="card animate-in" id="coach-card"
+     style="margin-bottom:1.25rem;border:1px solid rgba(16,185,129,0.3);background:linear-gradient(135deg,rgba(16,185,129,0.07),rgba(16,185,129,0.03))">
+  <div style="font-weight:700;margin-bottom:0.75rem;display:flex;align-items:center;gap:8px;font-size:1rem">
+    <span style="font-size:1.2rem">🎯</span>
+    Coaching — Session #{{ post_session_id }}
+    <span id="coach-badge" class="badge badge-green" style="margin-left:auto;font-size:0.7rem">{{ t('common.loading') }}</span>
+  </div>
+  <div id="coach-container" style="display:flex;flex-direction:column;gap:0.6rem">
+    {% for tip in post_tips %}
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:0.65rem 0.85rem;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);border-radius:8px">
+      <span style="font-size:1rem;margin-top:1px;flex-shrink:0">💡</span>
+      <span style="font-size:0.875rem;line-height:1.55">{{ tip }}</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 {% if profile.sessions == 0 %}
 <div class="empty-state card animate-in" style="margin-bottom:1.25rem">
   <span style="font-size:2.5rem">📊</span>
-  <span style="font-size:1.1rem;font-weight:700">Aucune donnée d'analyse</span>
-  <span>Jouez quelques sessions pour voir votre profil apparaître ici.</span>
-  <a href="/training" class="btn btn-primary" style="margin-top:0.5rem">Démarrer une session</a>
+  <span style="font-size:1.1rem;font-weight:700">{{ t('analysis.no_data_title') }}</span>
+  <span>{{ t('analysis.no_data_body') }}</span>
+  <a href="/training" class="btn btn-primary" style="margin-top:0.5rem">{{ t('analysis.start_session') }}</a>
 </div>
 {% endif %}
 
@@ -37,15 +56,15 @@
   <div class="card animate-in">
     <div style="font-weight:700;margin-bottom:0.5rem;display:flex;align-items:center;gap:8px">
       <i data-lucide="user" style="width:16px;height:16px;color:var(--accent-blue)"></i>
-      Profil de style
+      {{ t('analysis.style_profile') }}
     </div>
     <div style="margin-bottom:1rem">
-      <div style="font-size:0.8rem;color:var(--text-muted)">Style dominant</div>
+      <div style="font-size:0.8rem;color:var(--text-muted)">{{ t('analysis.dominant') }}</div>
       <div style="font-size:1.75rem;font-weight:900;color:var(--accent-blue)">
         {{ profile.style or 'N/A' }}
       </div>
       <div style="font-size:0.85rem;color:var(--text-muted);margin-top:0.25rem">
-        {{ profile.sessions }} sessions analysées
+        {{ profile.sessions }} {{ t('analysis.analyzed') }}
       </div>
     </div>
     {% if profile.totals %}
@@ -74,7 +93,7 @@
   <div class="card animate-in">
     <div style="font-weight:700;margin-bottom:0.5rem;display:flex;align-items:center;gap:8px">
       <i data-lucide="radar" style="width:16px;height:16px;color:var(--accent-green)"></i>
-      Radar de style
+      {{ t('analysis.radar') }}
     </div>
     <div id="radarChart"></div>
   </div>
@@ -84,16 +103,29 @@
 <div class="card animate-in" style="margin-bottom:1.25rem">
   <div style="font-weight:700;margin-bottom:0.5rem;display:flex;align-items:center;gap:8px">
     <i data-lucide="trending-up" style="width:16px;height:16px;color:var(--accent-orange)"></i>
-    Évolution (coups/min)
+    {{ t('analysis.evolution') }}
   </div>
   <div id="evolutionChart"></div>
+</div>
+
+<!-- ELO Evolution chart -->
+<div class="card animate-in" style="margin-bottom:1.25rem">
+  <div style="font-weight:700;margin-bottom:0.5rem;display:flex;align-items:center;gap:8px">
+    <i data-lucide="award" style="width:16px;height:16px;color:var(--accent-blue)"></i>
+    {{ t('analysis.elo_progress') }}
+  </div>
+  <div id="eloChart" style="min-height:200px">
+    <div id="elo-loading" style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--text-muted);font-size:0.875rem">
+      {{ t('common.loading') }}
+    </div>
+  </div>
 </div>
 
 <!-- Recommandations -->
 <div class="card animate-in">
   <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
     <i data-lucide="lightbulb" style="width:16px;height:16px;color:var(--accent-orange)"></i>
-    Recommandations personnalisées
+    {{ t('analysis.recommendations') }}
   </div>
   <div style="display:flex;flex-direction:column;gap:0.75rem">
     {% for rec in recommendations %}
@@ -103,7 +135,7 @@
     </div>
     {% else %}
     <div style="color:var(--text-muted);font-size:0.875rem">
-      Jouez quelques sessions pour obtenir vos recommandations !
+      {{ t('analysis.no_recs') }}
     </div>
     {% endfor %}
   </div>
@@ -112,6 +144,31 @@
 
 {% block scripts %}
 <script>
+{% if post_session_id %}
+fetch('/api/analysis/coach-tip/{{ post_session_id }}', {credentials: 'include'})
+  .then(r => r.ok ? r.json() : null)
+  .then(data => {
+    const badge = document.getElementById('coach-badge');
+    if (!data || !badge) return;
+    if (data.source === 'llm') {
+      document.getElementById('coach-container').innerHTML =
+        `<div style="display:flex;gap:10px;align-items:flex-start;padding:0.75rem 1rem;
+                     background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:8px">
+           <span style="font-size:1.1rem;flex-shrink:0">🤖</span>
+           <span style="font-size:0.875rem;line-height:1.6">${data.tip}</span>
+         </div>`;
+      badge.textContent = '{{ t('analysis.ia_claude') }}';
+      badge.style.cssText = 'background:rgba(99,102,241,0.15);color:#a5b4fc;font-size:0.7rem;margin-left:auto';
+    } else {
+      badge.textContent = '{{ t('analysis.auto') }}';
+    }
+  })
+  .catch(() => {
+    const badge = document.getElementById('coach-badge');
+    if (badge) badge.textContent = '{{ t('analysis.auto') }}';
+  });
+{% endif %}
+
 document.addEventListener('DOMContentLoaded', () => {
   if (window.lucide) lucide.createIcons();
 
@@ -134,6 +191,39 @@ document.addEventListener('DOMContentLoaded', () => {
       grid: { borderColor: 'rgba(255,255,255,0.08)' },
     }).render();
   }
+
+  // ── ELO progression chart ──
+  fetch('/api/elo-history/{{ user.id }}', { credentials: 'include' })
+    .then(r => r.ok ? r.json() : [])
+    .then(rows => {
+      const el = document.getElementById('eloChart');
+      document.getElementById('elo-loading')?.remove();
+      if (!rows.length) {
+        el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--text-muted);font-size:0.875rem">{{ t('analysis.no_elo') }}</div>';
+        return;
+      }
+      new ApexCharts(el, {
+        chart: { type: 'area', height: 200, background: 'transparent', toolbar: { show: false } },
+        series: [{ name: 'ELO', data: rows.map(r => ({ x: r.date, y: r.elo })) }],
+        stroke: { curve: 'smooth', width: 2, colors: ['#6366f1'] },
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.25, opacityTo: 0, stops: [0, 100] } },
+        colors: ['#6366f1'],
+        markers: { size: rows.length <= 20 ? 4 : 0, colors: ['#6366f1'] },
+        xaxis: { type: 'category', labels: { style: { colors: 'rgba(240,240,245,0.5)', fontSize: '11px' }, rotate: -30 }, tickAmount: Math.min(rows.length, 8) },
+        yaxis: { labels: { style: { colors: 'rgba(240,240,245,0.5)' }, formatter: v => Math.round(v) } },
+        grid: { borderColor: 'rgba(255,255,255,0.06)' },
+        theme: { mode: 'dark' },
+        tooltip: {
+          theme: 'dark',
+          custom: ({ dataPointIndex }) => {
+            const r = rows[dataPointIndex];
+            const sign = r.delta >= 0 ? '+' : '';
+            const col = r.delta >= 0 ? '#10b981' : '#f43f5e';
+            return `<div style="padding:8px 12px;font-size:0.82rem"><strong>${r.date}</strong><br>ELO: <strong>${r.elo}</strong><span style="color:${col};margin-left:6px">${sign}${r.delta}</span></div>`;
+          }
+        },
+      }).render();
+    });
 
   // ── Evolution chart ──
   const evo = {{ evolution | tojson }};

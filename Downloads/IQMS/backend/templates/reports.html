@@ -1,0 +1,425 @@
+{% extends "base.html" %}
+{% block title %}Rapports{% endblock %}
+{% block page_title %}Rapports & Recommandations{% endblock %}
+
+{% block head %}
+<style>
+@media print {
+  aside, header, .no-print, button, select { display: none !important; }
+  .lg\:pl-64 { padding-left: 0 !important; }
+  body { background: white !important; }
+  .dark body { background: white !important; color: black !important; }
+  main { padding: 0 !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="reportsPage()" x-init="init()">
+
+  <!-- ── En-tête style BrainBox ────────────────────────────── -->
+  <div class="gradient-brand-soft border border-emerald-100 dark:border-emerald-900/30 rounded-2xl p-6 mb-6">
+    <div class="flex flex-col md:flex-row md:items-center gap-5">
+      <div class="flex-1">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-10 h-10 gradient-brand rounded-xl flex items-center justify-center shadow-card">
+            <i data-lucide="file-text" class="w-5 h-5 text-white"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Rapport d'inventaire qualité de l'air</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Étapes 03, 06 & 09 du cycle — Mesurer · Suivre · Améliorer</p>
+          </div>
+        </div>
+      </div>
+      <!-- Contrôles export -->
+      <div class="flex flex-wrap gap-3">
+        <button @click="window.print()"
+                class="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300
+                       border border-slate-200 dark:border-slate-700 text-sm font-medium rounded-xl
+                       hover:bg-slate-200 dark:hover:bg-gray-600 transition-colors no-print">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          Imprimer / PDF
+        </button>
+        <select x-model="selectedDevice"
+                class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm
+                       text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+          <option value="">Tous les appareils</option>
+          {% for device in devices %}
+          <option value="{{ device.device_id }}">{{ device.name }}</option>
+          {% endfor %}
+        </select>
+        <select x-model="period"
+                class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm
+                       text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+          <option value="-1h">Dernière heure</option>
+          <option value="-24h">Dernières 24h</option>
+          <option value="-7d">7 derniers jours</option>
+          <option value="-30d">30 derniers jours</option>
+        </select>
+        <button @click="generateReport()"
+                class="flex items-center gap-2 px-4 py-2 gradient-brand text-white text-sm font-semibold rounded-xl
+                       hover:opacity-90 transition-opacity shadow-card">
+          <i data-lucide="refresh-cw" class="w-4 h-4" :class="loading && 'animate-spin'"></i>
+          Générer
+        </button>
+        <button @click="exportCSV()" x-show="reportData.length > 0"
+                class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300
+                       border border-slate-200 dark:border-slate-700 text-sm font-medium rounded-xl
+                       hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          CSV
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Statistiques résumées ────────────────────────────── -->
+  <div x-show="stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <template x-for="s in statCards" :key="s.label">
+      <div class="card bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 shadow-card">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center"
+               :style="`background-color:${s.color}18`">
+            <i :data-lucide="s.icon" class="w-4 h-4" :style="`color:${s.color}`"></i>
+          </div>
+          <span class="text-xs font-medium text-slate-400" x-text="s.label"></span>
+        </div>
+        <p class="text-3xl font-bold text-slate-900 dark:text-white" x-text="s.value"></p>
+        <p class="text-xs text-slate-400 mt-1" x-text="s.sub"></p>
+      </div>
+    </template>
+  </div>
+
+  <!-- ── Graphiques historique ─────────────────────────────── -->
+  <div x-show="reportData.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 shadow-card">
+      <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">AQI sur la période</h3>
+      <p class="text-xs text-slate-400 mb-4" x-text="`${reportData.length} mesures · période ${period}`"></p>
+      <div id="report-aqi-chart" style="height:200px;"></div>
+    </div>
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 shadow-card">
+      <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">CO (ppm) sur la période</h3>
+      <p class="text-xs text-slate-400 mb-4">Seuil OMS : <span class="text-red-400 font-medium">9 ppm</span></p>
+      <div id="report-co-chart" style="height:200px;"></div>
+    </div>
+  </div>
+
+  <!-- ── Recommandations automatiques (style BrainBox Étape 05) ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+
+    <!-- Liste recommandations -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+        <div class="w-8 h-8 gradient-brand rounded-lg flex items-center justify-center">
+          <i data-lucide="zap" class="w-4 h-4 text-white"></i>
+        </div>
+        <div>
+          <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Actions recommandées</h3>
+          <p class="text-xs text-slate-400">Étape 05 — Implémenter · Basé sur vos mesures actuelles</p>
+        </div>
+      </div>
+      <div class="p-4 space-y-3 max-h-80 overflow-y-auto">
+        <template x-for="r in recommendations" :key="r.title+r.device_id">
+          <div class="flex gap-3 p-3 rounded-xl border"
+               :class="{
+                 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800/30': r.color==='green',
+                 'bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-800/30':   r.color==='orange',
+                 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-800/30':               r.color==='red',
+                 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800/30':           r.color==='blue',
+                 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800/30':       r.color==='yellow',
+               }">
+            <i :data-lucide="r.icon" class="w-4 h-4 mt-0.5 flex-shrink-0"
+               :class="{
+                 'text-emerald-500':r.color==='green','text-orange-500':r.color==='orange',
+                 'text-red-500':r.color==='red','text-blue-500':r.color==='blue','text-amber-500':r.color==='yellow'
+               }"></i>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-semibold text-slate-800 dark:text-slate-200" x-text="r.title"></p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed" x-text="r.text"></p>
+              <p class="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                <i data-lucide="map-pin" class="w-3 h-3"></i>
+                <span x-text="r.device_name + ' — ' + r.location"></span>
+              </p>
+            </div>
+          </div>
+        </template>
+        <div x-show="recommendations.length===0" class="text-center py-8">
+          <i data-lucide="check-circle" class="w-10 h-10 mx-auto mb-2 text-emerald-400"></i>
+          <p class="text-sm text-slate-500">Toutes les zones respectent les seuils</p>
+          <p class="text-xs text-slate-400 mt-1">Continuez à surveiller régulièrement</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Suivi baseline style BrainBox Étape 06 -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+        <div class="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+          <i data-lucide="trending-down" class="w-4 h-4 text-blue-500"></i>
+        </div>
+        <div>
+          <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Suivi baseline</h3>
+          <p class="text-xs text-slate-400">Étape 06 — Suivre l'évolution de la qualité</p>
+        </div>
+      </div>
+      <div class="p-5 space-y-4">
+        <template x-for="m in baselineMetrics" :key="m.label">
+          <div>
+            <div class="flex justify-between items-center mb-1.5">
+              <span class="text-sm font-medium text-slate-600 dark:text-slate-300" x-text="m.label"></span>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-bold" :style="`color:${m.color}`" x-text="m.current"></span>
+                <span class="text-xs px-1.5 py-0.5 rounded-full font-medium"
+                      :class="m.trend==='up'?'bg-red-50 dark:bg-red-900/20 text-red-500':
+                                              'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500'"
+                      x-text="m.trendLabel"></span>
+              </div>
+            </div>
+            <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2">
+              <div class="h-2 rounded-full transition-all duration-700"
+                   :style="`width:${m.pct}%;background-color:${m.color}`"></div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-400 mt-1">
+              <span>0</span><span x-text="`Seuil: ${m.threshold}`"></span><span x-text="m.max"></span>
+            </div>
+          </div>
+        </template>
+        <div x-show="!stats" class="text-center py-4 text-slate-400 text-sm">
+          Générez un rapport pour voir le suivi baseline
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tableau données exportables ──────────────────────── -->
+  <div x-show="reportData.length > 0"
+       class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+      <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+        Données brutes — <span x-text="reportData.length + ' mesures'"></span>
+      </h3>
+      <button @click="exportCSV()"
+              class="flex items-center gap-2 px-3 py-1.5 gradient-brand text-white text-xs font-semibold
+                     rounded-lg shadow-card hover:opacity-90 transition-opacity">
+        <i data-lucide="download" class="w-3.5 h-3.5"></i>Export CSV complet
+      </button>
+    </div>
+    <div class="overflow-x-auto max-h-64">
+      <table class="w-full text-xs">
+        <thead class="sticky top-0 bg-slate-50 dark:bg-slate-700/50">
+          <tr>
+            <th class="text-left px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Heure</th>
+            <th class="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">AQI</th>
+            <th class="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">CO ppm</th>
+            <th class="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Temp °C</th>
+            <th class="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Hum %</th>
+            <th class="text-right px-4 py-2.5 font-semibold text-slate-500 uppercase tracking-wide">Lux</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="row in reportData.slice(0,100)" :key="row.time">
+            <tr class="border-t border-gray-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/20">
+              <td class="px-4 py-2 text-slate-500 dark:text-slate-400 font-mono" x-text="formatDt(row.time)"></td>
+              <td class="px-4 py-2 text-right font-bold" :style="`color:${aqiColor(row.aqi)}`" x-text="row.aqi||'—'"></td>
+              <td class="px-4 py-2 text-right text-slate-600 dark:text-slate-300" x-text="row.co_ppm?.toFixed(2)||'—'"></td>
+              <td class="px-4 py-2 text-right text-slate-600 dark:text-slate-300" x-text="row.temperature?.toFixed(1)||'—'"></td>
+              <td class="px-4 py-2 text-right text-slate-600 dark:text-slate-300" x-text="row.humidity?.toFixed(0)||'—'"></td>
+              <td class="px-4 py-2 text-right text-slate-600 dark:text-slate-300" x-text="row.lux ? Math.round(row.lux) : '—'"></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- État vide -->
+  <div x-show="!loading && reportData.length===0"
+       class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-12 text-center shadow-card">
+    <i data-lucide="file-text" class="w-12 h-12 mx-auto mb-3 text-gray-200 dark:text-slate-600"></i>
+    <p class="text-sm font-medium text-slate-500">Sélectionnez un appareil et une période, puis cliquez sur <strong>Générer</strong></p>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function reportsPage() {
+  return {
+    selectedDevice: '', period: '-24h',
+    loading: false, reportData: [], stats: null,
+    recommendations: [],
+    aqiChart: null, coChart: null,
+
+    get statCards() {
+      if (!this.stats) return [];
+      return [
+        { label:'AQI moyen', value: this.stats.avg_aqi, icon:'wind',
+          color: this._aqiColor(this.stats.avg_aqi), sub: this._aqiLabel(this.stats.avg_aqi) },
+        { label:'AQI max',   value: this.stats.max_aqi, icon:'alert-triangle',
+          color: this._aqiColor(this.stats.max_aqi), sub: 'pic enregistré' },
+        { label:'CO moyen',  value: (this.stats.avg_co||0).toFixed(1)+' ppm', icon:'cloud',
+          color: (this.stats.avg_co||0) > 9 ? '#ef4444' : '#f97316', sub: 'seuil OMS 9 ppm' },
+        { label:'Mesures',   value: this.reportData.length, icon:'database',
+          color: '#10b981', sub: `période ${this.period}` },
+      ];
+    },
+
+    get baselineMetrics() {
+      if (!this.stats) return [];
+      return [
+        { label:'AQI actuel', current:this.stats.avg_aqi, threshold:100, max:300,
+          pct:Math.min((this.stats.avg_aqi/300)*100,100), color:this._aqiColor(this.stats.avg_aqi),
+          trend: this.stats.avg_aqi>100?'up':'down', trendLabel: this.stats.avg_aqi>100?'↑ Dégradé':'↓ OK' },
+        { label:'CO moyen', current:(this.stats.avg_co||0).toFixed(1)+' ppm', threshold:'9 ppm', max:'50 ppm',
+          pct:Math.min(((this.stats.avg_co||0)/50)*100,100), color:(this.stats.avg_co||0)>9?'#ef4444':'#10b981',
+          trend:(this.stats.avg_co||0)>9?'up':'down', trendLabel:(this.stats.avg_co||0)>9?'↑ Élevé':'↓ Normal' },
+        { label:'Température moy.', current:(this.stats.avg_temp||20).toFixed(1)+'°C', threshold:'28°C', max:'40°C',
+          pct:Math.min(((this.stats.avg_temp||20)/40)*100,100), color:'#ef4444',
+          trend:(this.stats.avg_temp||20)>28?'up':'down', trendLabel:(this.stats.avg_temp||20)>28?'↑ Chaud':'↓ OK' },
+        { label:'Humidité moy.', current:(this.stats.avg_hum||50).toFixed(0)+'%', threshold:'70%', max:'100%',
+          pct:this.stats.avg_hum||50, color:'#3b82f6',
+          trend:(this.stats.avg_hum||50)>70?'up':'down', trendLabel:(this.stats.avg_hum||50)>70?'↑ Humide':'↓ OK' },
+      ];
+    },
+
+    async init() {
+      await this.loadRecommendations();
+      lucide.createIcons();
+      window.addEventListener('theme-change', () => {
+        this.renderCharts();
+      });
+    },
+
+    async loadRecommendations() {
+      try {
+        const r = await fetch('/api/v1/dashboard/recommendations');
+        if (!r.ok) return;
+        const json = await r.json();
+        this.recommendations = json.recommendations || [];
+        this.$nextTick(() => lucide.createIcons());
+      } catch(e) {}
+    },
+
+    async generateReport() {
+      this.loading = true;
+      try {
+        // Charger AQI + CO en parallèle pour l'appareil sélectionné (ou le premier disponible)
+        const deviceParam = this.selectedDevice || '';
+        const [aqiR, coR, tempR, humR] = await Promise.all([
+          fetch(`/api/v1/dashboard/history?device_id=${deviceParam}&field=aqi&start=${this.period}`),
+          fetch(`/api/v1/dashboard/history?device_id=${deviceParam}&field=co_ppm&start=${this.period}`),
+          fetch(`/api/v1/dashboard/history?device_id=${deviceParam}&field=temperature&start=${this.period}`),
+          fetch(`/api/v1/dashboard/history?device_id=${deviceParam}&field=humidity&start=${this.period}`),
+        ]);
+
+        // Si pas de device_id, l'API retourne 422 — on attrape silencieusement
+        if (!aqiR.ok) { this.loading = false; return; }
+
+        const [aqiJ, coJ, tempJ, humJ] = await Promise.all([
+          aqiR.json(), coR.json(), tempR.json(), humR.json()
+        ]);
+
+        // Construire une timeline commune
+        const byTime = {};
+        aqiJ.data.forEach(p => { byTime[p.time] = { ...byTime[p.time], time:p.time, aqi:p.value }; });
+        coJ.data.forEach(p =>   { byTime[p.time] = { ...byTime[p.time], co_ppm:p.value }; });
+        tempJ.data.forEach(p =>  { byTime[p.time] = { ...byTime[p.time], temperature:p.value }; });
+        humJ.data.forEach(p =>   { byTime[p.time] = { ...byTime[p.time], humidity:p.value }; });
+
+        this.reportData = Object.values(byTime).sort((a,b) => a.time.localeCompare(b.time));
+
+        // Statistiques
+        const aqis = this.reportData.map(r=>r.aqi||0).filter(Boolean);
+        const cos  = this.reportData.map(r=>r.co_ppm||0).filter(Boolean);
+        const temps= this.reportData.map(r=>r.temperature||0).filter(Boolean);
+        const hums = this.reportData.map(r=>r.humidity||0).filter(Boolean);
+        const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+
+        this.stats = {
+          avg_aqi: Math.round(avg(aqis)),
+          max_aqi: aqis.length ? Math.max(...aqis) : 0,
+          avg_co:  avg(cos),
+          avg_temp: avg(temps),
+          avg_hum:  avg(hums),
+        };
+
+        this.$nextTick(() => { this.renderCharts(); lucide.createIcons(); });
+      } catch(e) { console.warn(e); }
+      finally { this.loading = false; }
+    },
+
+    renderCharts() {
+      const dark = document.documentElement.classList.contains('dark');
+      const c = dark
+        ? { axis:'#6b7280', grid:'#1f2937', bg:'transparent' }
+        : { axis:'#9ca3af', grid:'#f9fafb', bg:'transparent' };
+
+      const times  = this.reportData.map(r => this.formatDt(r.time));
+      const aqiVals = this.reportData.map(r => r.aqi ?? null);
+      const coVals  = this.reportData.map(r => r.co_ppm ?? null);
+
+      const lineOpts = (name, data, color, markLine) => ({
+        backgroundColor: c.bg,
+        tooltip:{ trigger:'axis' },
+        grid:{ left:40, right:15, top:10, bottom:40 },
+        xAxis:{ type:'category', data:times, axisLabel:{color:c.axis,fontSize:9,rotate:20},
+                axisLine:{lineStyle:{color:c.grid}} },
+        yAxis:{ type:'value', axisLabel:{color:c.axis,fontSize:10},
+                splitLine:{lineStyle:{color:c.grid}} },
+        series:[{
+          name, type:'line', data, smooth:true, symbol:'none',
+          lineStyle:{color,width:2},
+          areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,
+            colorStops:[{offset:0,color:color+'28'},{offset:1,color:color+'04'}]}},
+          markLine: markLine ? { silent:true, symbol:'none',
+            data:[[{yAxis:markLine},{yAxis:markLine}]],
+            lineStyle:{color:'#ef4444',type:'dashed',opacity:.6} } : undefined,
+        }],
+      });
+
+      const el1 = document.getElementById('report-aqi-chart');
+      const el2 = document.getElementById('report-co-chart');
+      if (el1) {
+        if (!this.aqiChart) { this.aqiChart = echarts.init(el1); window.addEventListener('resize',()=>this.aqiChart?.resize()); }
+        this.aqiChart.setOption(lineOpts('AQI', aqiVals, '#10b981', 100));
+      }
+      if (el2) {
+        if (!this.coChart) { this.coChart = echarts.init(el2); window.addEventListener('resize',()=>this.coChart?.resize()); }
+        this.coChart.setOption(lineOpts('CO ppm', coVals, '#f97316', 9));
+      }
+    },
+
+    exportCSV() {
+      const h = 'Heure,AQI,CO_ppm,Température_°C,Humidité_%,Lux\n';
+      const rows = this.reportData.map(r =>
+        `${r.time},${r.aqi||0},${(r.co_ppm||0).toFixed(2)},${(r.temperature||0).toFixed(1)},${(r.humidity||0).toFixed(0)},${Math.round(r.lux||0)}`
+      ).join('\n');
+      const blob = new Blob([h+rows], {type:'text/csv;charset=utf-8;'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `aqims_rapport_${this.selectedDevice||'tous'}_${this.period.replace('-','')}_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    },
+
+    formatDt(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleString('fr-CA',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    },
+    aqiColor(v) {
+      if (!v) return '#9ca3af';
+      if (v<=50) return '#22c55e'; if (v<=100) return '#f59e0b';
+      if (v<=150) return '#f97316'; if (v<=200) return '#ef4444';
+      return '#8b5cf6';
+    },
+    _aqiColor(v) { return this.aqiColor(v); },
+    _aqiLabel(v) {
+      if (!v) return '—';
+      if (v<=50) return 'Bon'; if (v<=100) return 'Modéré';
+      if (v<=150) return 'Mauvais'; if (v<=200) return 'Très mauvais';
+      return 'Dangereux';
+    },
+  };
+}
+</script>
+{% endblock %}

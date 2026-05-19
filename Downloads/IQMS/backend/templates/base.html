@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="fr" x-data="appState()" :class="{ dark: dark }">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}AQIMS{% endblock %} — Air Quality Monitoring</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    // Apply theme before paint to avoid flash
+    const _t = localStorage.getItem('theme');
+    if (_t === 'dark' || (!_t && window.matchMedia('(prefers-color-scheme: dark)').matches))
+      document.documentElement.classList.add('dark');
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50:'#f0fdf9', 100:'#ccfbef', 200:'#99f6e0', 300:'#5eead4',
+              400:'#2dd4bf', 500:'#14b8a6', 600:'#0d9488', 700:'#0f766e',
+              800:'#115e59', 900:'#134e4a'
+            },
+            aqi: {
+              good:'#22c55e', moderate:'#f59e0b', sensitive:'#f97316',
+              unhealthy:'#ef4444', very:'#8b5cf6', hazardous:'#7e0023'
+            }
+          },
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] },
+          boxShadow: {
+            'glow-sm':  '0 0 15px -3px rgba(20,184,166,.25)',
+            'glow':     '0 0 25px -5px rgba(20,184,166,.3)',
+            'card':     '0 1px 3px rgba(0,0,0,.05), 0 1px 2px rgba(0,0,0,.05)',
+            'card-lg':  '0 4px 24px rgba(0,0,0,.06), 0 1px 4px rgba(0,0,0,.04)',
+          },
+          backdropBlur: { xs: '2px' },
+          animation: {
+            'fade-in':   'fadeIn .25s ease-out both',
+            'slide-up':  'slideUp .3s cubic-bezier(.16,1,.3,1) both',
+            'slide-in':  'slideIn .3s cubic-bezier(.16,1,.3,1) both',
+          },
+          keyframes: {
+            fadeIn:  { from:{opacity:0}, to:{opacity:1} },
+            slideUp: { from:{opacity:0,transform:'translateY(8px)'}, to:{opacity:1,transform:'none'} },
+            slideIn: { from:{opacity:0,transform:'translateX(-8px)'}, to:{opacity:1,transform:'none'} },
+          }
+        }
+      }
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    [x-cloak]{ display:none!important }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { font-feature-settings: 'cv11','ss01'; }
+    body { font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width:5px; height:5px }
+    ::-webkit-scrollbar-track { background:transparent }
+    ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:10px }
+    .dark ::-webkit-scrollbar-thumb { background:#334155 }
+    ::-webkit-scrollbar-thumb:hover { background:#94a3b8 }
+
+    /* ── Animations ── */
+    @keyframes pulse-online {
+      0%,100%{ box-shadow:0 0 0 0 rgba(20,184,166,.5) }
+      50%    { box-shadow:0 0 0 6px rgba(20,184,166,0) }
+    }
+    @keyframes float {
+      0%,100%{ transform:translateY(0) }
+      50%    { transform:translateY(-4px) }
+    }
+    @keyframes gradient-x {
+      0%,100%{ background-position:0% 50% }
+      50%    { background-position:100% 50% }
+    }
+    .pulse-online { animation: pulse-online 2.5s infinite }
+    .animate-float { animation: float 3s ease-in-out infinite }
+
+    /* ── Sidebar ── */
+    .sidebar-gradient {
+      background: linear-gradient(180deg,
+        rgba(255,255,255,1) 0%,
+        rgba(240,253,249,0.5) 100%);
+    }
+    .dark .sidebar-gradient {
+      background: linear-gradient(180deg,
+        rgba(15,23,42,1) 0%,
+        rgba(15,23,42,1) 100%);
+    }
+
+    /* ── Cards ── */
+    .card {
+      transition: transform .2s cubic-bezier(.16,1,.3,1),
+                  box-shadow .2s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,0,0,.09);
+    }
+    .dark .card:hover { box-shadow: 0 8px 32px rgba(0,0,0,.35) }
+
+    /* ── Gradients ── */
+    .gradient-brand {
+      background: linear-gradient(135deg, #14b8a6 0%, #0ea5e9 100%);
+    }
+    .gradient-brand-animated {
+      background: linear-gradient(270deg, #14b8a6, #0ea5e9, #6366f1, #14b8a6);
+      background-size: 300% 300%;
+      animation: gradient-x 6s ease infinite;
+    }
+    .gradient-brand-soft {
+      background: linear-gradient(135deg, #f0fdf9 0%, #e0f2fe 100%);
+    }
+    .dark .gradient-brand-soft {
+      background: linear-gradient(135deg, #0f4c3920 0%, #0c4a6e20 100%);
+    }
+
+    /* ── Nav active item ── */
+    .nav-active {
+      background: linear-gradient(135deg, rgba(20,184,166,.12) 0%, rgba(14,165,233,.08) 100%);
+      color: #0d9488;
+      box-shadow: inset 0 0 0 1px rgba(20,184,166,.2);
+    }
+    .dark .nav-active {
+      background: linear-gradient(135deg, rgba(20,184,166,.15) 0%, rgba(14,165,233,.1) 100%);
+      color: #2dd4bf;
+    }
+
+    /* ── Glass ── */
+    .glass {
+      background: rgba(255,255,255,.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .dark .glass {
+      background: rgba(15,23,42,.85);
+    }
+
+    /* ── Input focus ── */
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(20,184,166,.2);
+    }
+
+    /* ── Stat card top accent ── */
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 12px 12px 0 0;
+      background: linear-gradient(90deg, #14b8a6, #0ea5e9);
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .stat-card:hover::before { opacity: 1 }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+
+<body class="bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-900 dark:text-slate-100 transition-colors duration-300">
+
+{% if user is defined and user %}
+
+  <!-- ── Sidebar ──────────────────────────────────────────────── -->
+  <aside class="fixed inset-y-0 left-0 z-50 w-64 sidebar-gradient
+                border-r border-slate-100 dark:border-slate-800/80
+                shadow-card flex flex-col transition-transform duration-300 ease-out"
+         :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
+
+    <!-- Logo -->
+    <div class="flex items-center gap-3 px-5 py-[18px] border-b border-slate-100 dark:border-slate-800/60">
+      <div class="relative w-9 h-9">
+        <div class="absolute inset-0 gradient-brand rounded-xl shadow-glow-sm animate-float"></div>
+        <div class="absolute inset-0 flex items-center justify-center">
+          <i data-lucide="wind" class="w-5 h-5 text-white drop-shadow-sm"></i>
+        </div>
+      </div>
+      <div>
+        <p class="font-bold text-sm tracking-wide text-slate-900 dark:text-white">AQIMS</p>
+        <p class="text-[10px] text-slate-400 font-medium tracking-wide uppercase">Air Quality Monitor</p>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 px-2.5 py-4 space-y-0.5 overflow-y-auto">
+
+      <p class="px-3 pt-1 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        Surveillance
+      </p>
+
+      {% set nav_items = [
+        ('/dashboard', 'layout-dashboard', 'Tableau de bord',   ''),
+        ('/map',       'map-pin',          'Carte en direct',   'live'),
+        ('/devices',   'cpu',              'Appareils',         ''),
+        ('/alerts',    'bell',             'Alertes',           'alert'),
+      ] %}
+      {% for path, icon, label, badge in nav_items %}
+      <a href="{{ path }}"
+         class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                {% if request.url.path == path %}nav-active{% else %}text-slate-500 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white{% endif %}">
+        <i data-lucide="{{ icon }}" class="w-4 h-4 flex-shrink-0
+           {% if request.url.path == path %}text-brand-600 dark:text-brand-400{% endif %}"></i>
+        <span>{{ label }}</span>
+        {% if badge == 'live' %}
+          <span class="ml-auto w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse"></span>
+        {% elif badge == 'alert' %}
+          <span id="alert-badge" class="ml-auto hidden items-center justify-center min-w-[18px] h-[18px] px-1
+                                         rounded-full bg-red-500 text-white text-[10px] font-bold"></span>
+        {% endif %}
+      </a>
+      {% endfor %}
+
+      <p class="px-3 pt-5 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        Analyse
+      </p>
+      {% set nav_analysis = [
+        ('/history', 'trending-up',  'Historique'),
+        ('/compare', 'bar-chart-2',  'Comparer les zones'),
+        ('/reports', 'file-text',    'Rapports'),
+      ] %}
+      {% for path, icon, label in nav_analysis %}
+      <a href="{{ path }}"
+         class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                {% if request.url.path == path %}nav-active{% else %}text-slate-500 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white{% endif %}">
+        <i data-lucide="{{ icon }}" class="w-4 h-4 flex-shrink-0
+           {% if request.url.path == path %}text-brand-600 dark:text-brand-400{% endif %}"></i>
+        <span>{{ label }}</span>
+      </a>
+      {% endfor %}
+
+      <p class="px-3 pt-5 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        Net Zéro
+      </p>
+      {% set nav_netzero = [
+        ('/ghg',     'activity',   'Inventaire GES'),
+        ('/offsets', 'leaf',       'Offsets Carbone'),
+        ('/goals',   'target',     'Objectifs GES'),
+      ] %}
+      {% for path, icon, label in nav_netzero %}
+      <a href="{{ path }}"
+         class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                {% if request.url.path == path %}nav-active{% else %}text-slate-500 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white{% endif %}">
+        <i data-lucide="{{ icon }}" class="w-4 h-4 flex-shrink-0
+           {% if request.url.path == path %}text-brand-600 dark:text-brand-400{% endif %}"></i>
+        <span>{{ label }}</span>
+      </a>
+      {% endfor %}
+
+      {% if user.is_admin %}
+      <!-- Séparateur administration -->
+      <div class="mx-3 mt-5 mb-2 border-t border-amber-200/60 dark:border-amber-700/30"></div>
+      <p class="px-3 pb-2 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5"
+         style="color:#f59e0b">
+        <i data-lucide="shield-check" class="w-3 h-3"></i>
+        Administration
+      </p>
+      {% set nav_admin = [
+        ('/admin',   'users',          'Utilisateurs'),
+        ('/devices', 'cpu',            'Config. appareils'),
+        ('/reports', 'file-bar-chart', 'Rapports système'),
+      ] %}
+      {% for path, icon, label in nav_admin %}
+      <a href="{{ path }}"
+         class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                {% if request.url.path == path %}bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 shadow-sm{% else %}text-amber-600/80 dark:text-amber-500/70 hover:bg-amber-50/80 dark:hover:bg-amber-900/20 hover:text-amber-700 dark:hover:text-amber-400{% endif %}">
+        <i data-lucide="{{ icon }}" class="w-4 h-4 flex-shrink-0"></i>
+        <span>{{ label }}</span>
+      </a>
+      {% endfor %}
+      <!-- Bouton Données démo -->
+      <button onclick="seedDemo()"
+              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                     text-amber-600/80 dark:text-amber-500/70 hover:bg-amber-50/80 dark:hover:bg-amber-900/20 hover:text-amber-700 dark:hover:text-amber-400">
+        <i data-lucide="database" class="w-4 h-4 flex-shrink-0"></i>
+        <span>Données démo</span>
+      </button>
+      {% endif %}
+    </nav>
+
+    <!-- Utilisateur -->
+    <div class="p-3 border-t border-slate-100 dark:border-slate-800/60">
+      <div class="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors group">
+        <a href="/profile" class="flex items-center gap-2.5 flex-1 min-w-0">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center
+                      text-xs font-bold text-white flex-shrink-0
+                      {% if user.is_admin %}shadow-[0_0_10px_rgba(245,158,11,.4)]{% else %}shadow-glow-sm{% endif %}"
+               style="background: {% if user.is_admin %}linear-gradient(135deg,#f59e0b,#ef4444){% else %}linear-gradient(135deg,#14b8a6,#0ea5e9){% endif %}">
+            {{ user.username[0]|upper }}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-slate-900 dark:text-white truncate">{{ user.username }}</p>
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide
+                         {% if user.is_admin %}bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400
+                         {% else %}bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400{% endif %}">
+              <i data-lucide="{% if user.is_admin %}shield-check{% else %}eye{% endif %}" class="w-2.5 h-2.5"></i>
+              {{ "Administrateur" if user.is_admin else "Lecture seule" }}
+            </span>
+          </div>
+        </a>
+        <a href="/logout" title="Déconnexion"
+           class="flex-shrink-0 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+          <i data-lucide="log-out" class="w-3.5 h-3.5 text-slate-400 hover:text-red-500 transition-colors"></i>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Overlay mobile -->
+  <div x-show="sidebarOpen" x-cloak @click="sidebarOpen = false"
+       class="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden
+              transition-opacity duration-300"></div>
+
+  <!-- ── Contenu principal ─────────────────────────────────── -->
+  <div class="lg:pl-64 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 glass border-b border-slate-200/60 dark:border-slate-800/60
+                   px-6 py-3.5 transition-all duration-200">
+      <div class="flex items-center justify-between">
+
+        <!-- Gauche : menu mobile + titre -->
+        <div class="flex items-center gap-4">
+          <button @click="sidebarOpen = !sidebarOpen"
+                  class="lg:hidden p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800
+                         hover:text-slate-900 dark:hover:text-white transition-colors">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+          <div>
+            <h1 class="text-base font-semibold text-slate-900 dark:text-white leading-tight">
+              {% block page_title %}Dashboard{% endblock %}
+            </h1>
+            <p class="text-[11px] text-slate-400 font-medium" id="last-update">—</p>
+          </div>
+        </div>
+
+        <!-- Droite : statuts + dark mode -->
+        <div class="flex items-center gap-2">
+
+          <!-- Badge WebSocket -->
+          <div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                      bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/40">
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-300" id="ws-dot"></span>
+            <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400" id="ws-text">Connexion...</span>
+          </div>
+
+          <!-- Badge rôle -->
+          <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[11px] font-semibold
+                      {% if user.is_admin %}bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 text-amber-700 dark:text-amber-400
+                      {% else %}bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/40 text-slate-500 dark:text-slate-400{% endif %}">
+            <i data-lucide="{% if user.is_admin %}shield-check{% else %}eye{% endif %}" class="w-3 h-3"></i>
+            {{ "Admin" if user.is_admin else "Consultation" }}
+          </div>
+
+          <!-- Toggle dark -->
+          <button @click="toggleDark()" title="Mode nuit / jour"
+                  class="w-8 h-8 flex items-center justify-center rounded-xl transition-all duration-200
+                         bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700
+                         border border-slate-200/60 dark:border-slate-700/40
+                         text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+            <i :data-lucide="dark ? 'sun' : 'moon'" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 p-5 lg:p-6 animate-fade-in">
+{% endif %}
+
+{% if not (user is defined and user) %}
+  <!-- Dark mode toggle for auth pages -->
+  <button @click="toggleDark()" title="Mode nuit / jour"
+          class="fixed top-4 right-4 z-50 w-9 h-9 flex items-center justify-center rounded-xl
+                 glass border border-slate-200/60 dark:border-slate-700/40
+                 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white
+                 shadow-card transition-all duration-200">
+    <i :data-lucide="dark ? 'sun' : 'moon'" class="w-4 h-4"></i>
+  </button>
+{% endif %}
+
+  {% block content %}{% endblock %}
+
+{% if user is defined and user %}
+    </main>
+  </div>
+{% endif %}
+
+<script>
+  function appState() {
+    return {
+      sidebarOpen: false,
+      dark: document.documentElement.classList.contains('dark'),
+
+      toggleDark() {
+        this.dark = !this.dark;
+        document.documentElement.classList.toggle('dark', this.dark);
+        localStorage.setItem('theme', this.dark ? 'dark' : 'light');
+        window.dispatchEvent(new CustomEvent('theme-change', { detail: { dark: this.dark } }));
+        this.$nextTick(() => lucide.createIcons());
+      }
+    }
+  }
+
+  // Init icons
+  document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
+  lucide.createIcons();
+
+  // Live clock
+  function _tick() {
+    const el = document.getElementById('last-update');
+    if (el) el.textContent = 'Actualisé à ' +
+      new Date().toLocaleTimeString('fr-CA', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  }
+  _tick(); setInterval(_tick, 1000);
+
+  // Seed demo (admin only)
+  async function seedDemo() {
+    const r = await fetch('/api/v1/demo/seed', { method: 'POST' });
+    if (r.ok) {
+      const d = await r.json();
+      alert(`✅ Données démo insérées\nAppareils : ${d.devices_created?.length ?? 0} créés\nLectures GES : ${d.ghg_readings_created}\nOffsets : ${d.offsets_created}\nObjectifs : ${d.goals_created}`);
+      location.reload();
+    } else {
+      alert('Erreur lors du seed démo');
+    }
+  }
+
+  // Alert badge
+  (async function() {
+    try {
+      const r = await fetch('/api/v1/alerts/?resolved=false&limit=100');
+      if (!r.ok) return;
+      const j = await r.json();
+      const count = Array.isArray(j) ? j.length : (j.total ?? 0);
+      const badge = document.getElementById('alert-badge');
+      if (badge && count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.classList.remove('hidden');
+        badge.classList.add('flex');
+      }
+    } catch(e) {}
+  })();
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

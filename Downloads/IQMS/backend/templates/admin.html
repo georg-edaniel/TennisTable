@@ -1,0 +1,797 @@
+{% extends "base.html" %}
+{% block title %}Administration{% endblock %}
+{% block page_title %}Administration{% endblock %}
+
+{% block content %}
+<div x-data="adminPage()" x-init="init()">
+
+  <!-- Onglets -->
+  <div class="flex gap-1 mb-6 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 w-fit">
+    <button @click="tab='users'"
+            :class="tab==='users' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+      <i data-lucide="users" class="w-4 h-4"></i>
+      Utilisateurs
+      <span class="ml-1 text-xs font-normal opacity-70" x-text="'(' + users.length + ')'"></span>
+    </button>
+    <button @click="tab='clients'; loadClients()"
+            :class="tab==='clients' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+      <i data-lucide="monitor-smartphone" class="w-4 h-4"></i>
+      Clients &amp; Appareils
+    </button>
+    <button @click="tab='zones'; loadZones()"
+            :class="tab==='zones' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
+            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+      <i data-lucide="map-pin" class="w-4 h-4"></i>
+      Zones
+      <span class="ml-1 text-xs font-normal opacity-70" x-text="'(' + zones.length + ')'"></span>
+    </button>
+  </div>
+
+  <!-- ── Onglet Utilisateurs ─────────────────────────────────── -->
+  <div x-show="tab==='users'">
+  <div class="flex items-center justify-between mb-4">
+    <p class="text-sm text-slate-400">
+      <span class="font-semibold text-slate-700 dark:text-slate-200" x-text="users.length"></span> utilisateur(s)
+    </p>
+    <button @click="loadUsers()"
+            class="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-brand-700 dark:text-brand-400
+                   rounded-xl text-sm font-medium hover:bg-brand-100 dark:hover:bg-brand-900/30 transition-colors
+                   border border-emerald-100 dark:border-emerald-800">
+      <i data-lucide="refresh-cw" class="w-4 h-4" :class="loading && 'animate-spin'"></i>
+      Actualiser
+    </button>
+  </div>
+
+  <div x-show="msg" x-cloak
+       :class="msgOk ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 text-emerald-600' :
+                       'bg-red-50 dark:bg-red-900/20 border-red-200 text-red-600'"
+       class="flex items-center gap-2 border rounded-lg px-4 py-3 mb-4 text-sm">
+    <i :data-lucide="msgOk ? 'check-circle' : 'alert-circle'" class="w-4 h-4 flex-shrink-0"></i>
+    <span x-text="msg"></span>
+  </div>
+
+  <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 dark:bg-slate-700/30">
+            <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Utilisateur</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Email</th>
+            <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Admin</th>
+            <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Actif</th>
+            <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">2FA</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Dernière connexion</th>
+            <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="u in users" :key="u.id">
+            <tr class="border-t border-gray-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
+              <td class="px-5 py-3.5">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 gradient-brand rounded-full flex items-center justify-center text-xs font-bold text-white">
+                    <span x-text="u.username[0].toUpperCase()"></span>
+                  </div>
+                  <div>
+                    <p class="font-semibold text-slate-900 dark:text-white" x-text="u.username"></p>
+                    <p class="text-xs text-slate-400" x-text="'#' + u.id"></p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-4 py-3.5 text-slate-600 dark:text-slate-300 text-xs" x-text="u.email"></td>
+              <td class="px-4 py-3.5 text-center">
+                <button @click="toggleAdmin(u)"
+                        :class="u.is_admin ? 'bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800' :
+                                             'bg-slate-100 dark:bg-slate-700 text-slate-400 border-slate-200 dark:border-slate-700'"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors hover:opacity-80">
+                  <i :data-lucide="u.is_admin ? 'shield-check' : 'shield'" class="w-3 h-3"></i>
+                  <span x-text="u.is_admin ? 'Admin' : 'Opérateur'"></span>
+                </button>
+              </td>
+              <td class="px-4 py-3.5 text-center">
+                <button @click="toggleActive(u)"
+                        :class="u.is_active ? 'bg-emerald-100 dark:bg-emerald-900/20 text-brand-600 dark:text-brand-400 border-emerald-200 dark:border-emerald-800' :
+                                              'bg-red-100 dark:bg-red-900/20 text-red-500 border-red-200 dark:border-red-800'"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors hover:opacity-80">
+                  <span class="w-1.5 h-1.5 rounded-full" :class="u.is_active ? 'bg-emerald-400' : 'bg-red-400'"></span>
+                  <span x-text="u.is_active ? 'Actif' : 'Désactivé'"></span>
+                </button>
+              </td>
+              <td class="px-4 py-3.5 text-center">
+                <span :class="u.totp_enabled ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'">
+                  <i :data-lucide="u.totp_enabled ? 'shield-check' : 'shield-off'" class="w-4 h-4 mx-auto"></i>
+                </span>
+              </td>
+              <td class="px-4 py-3.5 text-xs text-slate-400" x-text="u.last_login ? new Date(u.last_login).toLocaleString('fr-CA',{dateStyle:'short',timeStyle:'short'}) : 'Jamais'"></td>
+              <td class="px-4 py-3.5 text-center">
+                <button @click="deactivate(u)"
+                        x-show="u.is_active"
+                        class="text-red-400 hover:text-red-600 transition-colors p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                        title="Désactiver">
+                  <i data-lucide="user-x" class="w-4 h-4"></i>
+                </button>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="users.length===0 && !loading">
+            <td colspan="7" class="px-5 py-12 text-center text-slate-400 text-sm">
+              <i data-lucide="users" class="w-8 h-8 mx-auto mb-2 opacity-20"></i>
+              Aucun utilisateur trouvé
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  </div><!-- /tab users -->
+
+  <!-- ── Onglet Clients & Appareils ─────────────────────────── -->
+  <div x-show="tab==='clients'" x-cloak>
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <!-- Fil d'Ariane (niveau 2+) -->
+        <nav x-show="clientView !== 'list'" class="flex items-center gap-1.5 text-sm mb-1">
+          <button @click="backToClients()"
+                  class="text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors font-medium">
+            Clients
+          </button>
+          <span class="text-slate-300 dark:text-slate-600">›</span>
+          <span class="font-medium"
+                :class="clientView === 'devices' ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 cursor-pointer transition-colors'"
+                @click="clientView === 'detail' && backToDevices()"
+                x-text="selectedClient ? selectedClient.username : ''"></span>
+          <template x-if="clientView === 'detail' && selectedDevice">
+            <span class="contents">
+              <span class="text-slate-300 dark:text-slate-600">›</span>
+              <span class="font-medium text-slate-700 dark:text-slate-200" x-text="selectedDevice.name"></span>
+            </span>
+          </template>
+        </nav>
+        <p class="text-sm text-slate-400">
+          <span x-show="clientView === 'list'">
+            Vue maintenance —
+            <span class="font-semibold text-slate-700 dark:text-slate-200" x-text="clients.length"></span> client(s)
+          </span>
+          <span x-show="clientView === 'devices'" x-cloak>
+            <span class="font-semibold text-slate-700 dark:text-slate-200" x-text="selectedClient ? selectedClient.device_count : 0"></span> appareil(s)
+          </span>
+          <span x-show="clientView === 'detail'" x-cloak>Détails de l'appareil</span>
+        </p>
+      </div>
+      <button @click="loadClients()" x-show="clientView === 'list'"
+              class="flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400
+                     rounded-xl text-sm font-medium hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors
+                     border border-purple-100 dark:border-purple-800">
+        <i data-lucide="refresh-cw" class="w-4 h-4" :class="loadingClients && 'animate-spin'"></i>
+        Actualiser
+      </button>
+    </div>
+
+    <!-- ── NIVEAU 1 : Liste des clients ── -->
+    <div x-show="clientView === 'list'">
+      <template x-if="clients.length === 0 && !loadingClients">
+        <div class="text-center py-16 text-slate-400">
+          <i data-lucide="users" class="w-12 h-12 mx-auto mb-3 opacity-20"></i>
+          <p class="font-medium">Aucun client enregistré</p>
+          <p class="text-xs mt-1">Créez des comptes utilisateurs non-admin pour commencer</p>
+        </div>
+      </template>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-for="c in clients" :key="c.id">
+          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card p-5 flex flex-col gap-3 hover:border-purple-200 dark:hover:border-purple-800 transition-colors">
+            <!-- Avatar + nom + email -->
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
+                <span class="text-base font-bold text-purple-600 dark:text-purple-400" x-text="c.username[0].toUpperCase()"></span>
+              </div>
+              <div class="min-w-0">
+                <p class="font-bold text-slate-900 dark:text-white text-sm truncate" x-text="c.username"></p>
+                <p class="text-xs text-slate-400 truncate" x-text="c.email"></p>
+              </div>
+            </div>
+            <!-- Badges statut + nb appareils -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+                    :class="c.is_active ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-red-50 dark:bg-red-900/20 text-red-500'">
+                <span class="w-1.5 h-1.5 rounded-full" :class="c.is_active ? 'bg-emerald-400' : 'bg-red-400'"></span>
+                <span x-text="c.is_active ? 'Actif' : 'Désactivé'"></span>
+              </span>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                <i data-lucide="cpu" class="w-3 h-3"></i>
+                <span x-text="c.device_count + ' appareil(s)'"></span>
+              </span>
+            </div>
+            <!-- Dernière connexion -->
+            <p class="text-xs text-slate-400">
+              <i data-lucide="clock" class="w-3 h-3 inline mr-1"></i>
+              <span x-text="c.last_login ? 'Connexion : ' + new Date(c.last_login).toLocaleString('fr-CA',{dateStyle:'short',timeStyle:'short'}) : 'Jamais connecté'"></span>
+            </p>
+            <!-- CTA -->
+            <button @click="selectClient(c)"
+                    class="mt-auto w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-xl text-sm font-semibold hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors border border-purple-100 dark:border-purple-800">
+              Voir les appareils
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ── NIVEAU 2 : Appareils du client ── -->
+    <div x-show="clientView === 'devices'" x-cloak>
+      <div class="flex items-center gap-3 mb-4">
+        <button @click="backToClients()"
+                class="flex items-center gap-1.5 text-sm text-slate-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          Retour
+        </button>
+        <span class="text-slate-200 dark:text-slate-700">|</span>
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center">
+            <span class="text-xs font-bold text-purple-600" x-text="selectedClient ? selectedClient.username[0].toUpperCase() : ''"></span>
+          </div>
+          <span class="font-semibold text-slate-800 dark:text-slate-200 text-sm" x-text="selectedClient ? selectedClient.username : ''"></span>
+        </div>
+      </div>
+
+      <template x-if="selectedClient && selectedClient.devices.length === 0">
+        <div class="text-center py-16 text-slate-400">
+          <i data-lucide="cpu" class="w-12 h-12 mx-auto mb-3 opacity-20"></i>
+          <p class="font-medium">Aucun appareil assigné à ce client</p>
+        </div>
+      </template>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <template x-for="d in (selectedClient ? selectedClient.devices : [])" :key="d.device_id">
+          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card p-5 flex flex-col gap-3 hover:border-blue-200 dark:hover:border-blue-800 transition-colors">
+            <!-- Icône + nom + device_id -->
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                   :class="d.is_online ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-slate-100 dark:bg-slate-700'">
+                <i data-lucide="cpu" class="w-5 h-5" :class="d.is_online ? 'text-emerald-500' : 'text-slate-400'"></i>
+              </div>
+              <div class="min-w-0">
+                <p class="font-bold text-slate-900 dark:text-white text-sm truncate" x-text="d.name"></p>
+                <p class="text-xs text-slate-400 font-mono truncate" x-text="d.device_id"></p>
+              </div>
+            </div>
+            <!-- Badges en ligne + AQI -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+                    :class="d.is_online ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'">
+                <span class="w-1.5 h-1.5 rounded-full" :class="d.is_online ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'"></span>
+                <span x-text="d.is_online ? 'En ligne' : 'Hors ligne'"></span>
+              </span>
+              <span x-show="d.last_aqi != null"
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold"
+                    :class="!d.last_aqi ? 'bg-slate-100 text-slate-400' : d.last_aqi <= 50 ? 'bg-emerald-50 text-emerald-600' : d.last_aqi <= 100 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-500'"
+                    x-text="'AQI ' + d.last_aqi"></span>
+            </div>
+            <!-- Localisation -->
+            <div class="text-xs text-slate-500 dark:text-slate-400 space-y-1">
+              <div x-show="d.building || d.floor || d.room" class="flex items-start gap-1.5">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-slate-400"></i>
+                <span x-text="[d.building, d.floor ? 'Étage ' + d.floor : '', d.room].filter(Boolean).join(' · ')"></span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="git-branch" class="w-3.5 h-3.5 flex-shrink-0 text-slate-400"></i>
+                <span x-text="'Firmware v' + d.firmware_version"></span>
+              </div>
+            </div>
+            <!-- CTA -->
+            <button @click="selectDevice(d)"
+                    class="mt-auto w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl text-sm font-semibold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors border border-blue-100 dark:border-blue-800">
+              Voir les détails
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- ── NIVEAU 3 : Détails complets d'un appareil ── -->
+    <div x-show="clientView === 'detail'" x-cloak>
+      <div class="flex items-center gap-3 mb-6">
+        <button @click="backToDevices()"
+                class="flex items-center gap-1.5 text-sm text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          Retour aux appareils
+        </button>
+      </div>
+
+      <template x-if="selectedDevice">
+        <div class="space-y-4 max-w-2xl">
+
+          <!-- Identification -->
+          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card p-5">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4 flex items-center gap-2">
+              <i data-lucide="fingerprint" class="w-3.5 h-3.5"></i>
+              Identification
+            </h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">Nom</p>
+                <p class="text-sm font-semibold text-slate-800 dark:text-slate-200" x-text="selectedDevice.name"></p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">Device ID</p>
+                <p class="text-sm font-mono text-slate-600 dark:text-slate-300 break-all" x-text="selectedDevice.device_id"></p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">Statut</p>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+                      :class="selectedDevice.is_online ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'">
+                  <span class="w-1.5 h-1.5 rounded-full" :class="selectedDevice.is_online ? 'bg-emerald-400' : 'bg-slate-400'"></span>
+                  <span x-text="selectedDevice.is_online ? 'En ligne' : 'Hors ligne'"></span>
+                </span>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">Dernière activité</p>
+                <p class="text-sm text-slate-600 dark:text-slate-300"
+                   x-text="selectedDevice.last_seen ? new Date(selectedDevice.last_seen).toLocaleString('fr-CA',{dateStyle:'medium',timeStyle:'short'}) : '—'"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Localisation -->
+          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card p-5">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4 flex items-center gap-2">
+              <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+              Localisation
+            </h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">Lieu</p>
+                <p class="text-sm text-slate-700 dark:text-slate-300" x-text="selectedDevice.location || '—'"></p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">Bâtiment</p>
+                <p class="text-sm text-slate-700 dark:text-slate-300" x-text="selectedDevice.building || '—'"></p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">Étage</p>
+                <p class="text-sm text-slate-700 dark:text-slate-300" x-text="selectedDevice.floor || '—'"></p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">Salle</p>
+                <p class="text-sm text-slate-700 dark:text-slate-300" x-text="selectedDevice.room || '—'"></p>
+              </div>
+              <div x-show="selectedDevice.lat && selectedDevice.lng" class="col-span-2">
+                <p class="text-xs text-slate-400 mb-0.5">GPS</p>
+                <p class="text-sm font-mono text-slate-600 dark:text-slate-300"
+                   x-text="selectedDevice.lat + ', ' + selectedDevice.lng"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dernières mesures -->
+          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card p-5">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4 flex items-center gap-2">
+              <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+              Dernières mesures
+            </h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div class="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                <p class="text-xs text-slate-400 mb-1">AQI</p>
+                <p class="text-xl font-bold"
+                   :class="!selectedDevice.last_aqi ? 'text-slate-400' : selectedDevice.last_aqi <= 50 ? 'text-emerald-500' : selectedDevice.last_aqi <= 100 ? 'text-amber-500' : 'text-red-500'"
+                   x-text="selectedDevice.last_aqi ?? '—'"></p>
+              </div>
+              <div class="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                <p class="text-xs text-slate-400 mb-1">CO (ppm)</p>
+                <p class="text-xl font-bold text-slate-700 dark:text-slate-200"
+                   x-text="selectedDevice.last_co_ppm != null ? selectedDevice.last_co_ppm.toFixed(1) : '—'"></p>
+              </div>
+              <div class="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                <p class="text-xs text-slate-400 mb-1">Température</p>
+                <p class="text-xl font-bold text-slate-700 dark:text-slate-200"
+                   x-text="selectedDevice.last_temperature != null ? selectedDevice.last_temperature.toFixed(1) + '°C' : '—'"></p>
+              </div>
+              <div class="text-center p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                <p class="text-xs text-slate-400 mb-1">Humidité</p>
+                <p class="text-xl font-bold text-slate-700 dark:text-slate-200"
+                   x-text="selectedDevice.last_humidity != null ? selectedDevice.last_humidity.toFixed(1) + '%' : '—'"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Seuils d'alerte -->
+          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card p-5">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4 flex items-center gap-2">
+              <i data-lucide="bell" class="w-3.5 h-3.5"></i>
+              Seuils d'alerte
+            </h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">CO max</p>
+                <p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="selectedDevice.alert_co_threshold + ' ppm'"></p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">AQI max</p>
+                <p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="selectedDevice.alert_aqi_threshold"></p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">Température max</p>
+                <p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="selectedDevice.alert_temp_max + '°C'"></p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">Humidité max</p>
+                <p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="selectedDevice.alert_humidity_max + '%'"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Système -->
+          <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card p-5">
+            <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4 flex items-center gap-2">
+              <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+              Système
+            </h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">Firmware</p>
+                <p class="text-sm font-mono font-semibold text-slate-700 dark:text-slate-200" x-text="'v' + selectedDevice.firmware_version"></p>
+              </div>
+              <div>
+                <p class="text-xs text-slate-400 mb-0.5">Enregistré le</p>
+                <p class="text-sm text-slate-600 dark:text-slate-300"
+                   x-text="selectedDevice.created_at ? new Date(selectedDevice.created_at).toLocaleDateString('fr-CA') : '—'"></p>
+              </div>
+            </div>
+            <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <a :href="'/history?device=' + selectedDevice.device_id"
+                 class="inline-flex items-center gap-2 text-sm text-brand-600 dark:text-brand-400 hover:underline font-medium">
+                <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                Voir l'historique complet
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </template>
+    </div>
+
+  </div><!-- /tab clients -->
+
+  <!-- ── Onglet Zones ─────────────────────────────────────────── -->
+  <div x-show="tab==='zones'" x-cloak>
+
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-sm text-slate-400">
+        <span class="font-semibold text-slate-700 dark:text-slate-200" x-text="zones.length"></span> zone(s) — l'ESP32 publie <code class="bg-slate-100 dark:bg-slate-700 px-1 py-0.5 rounded text-xs">"zone": "slug"</code> dans son payload MQTT
+      </p>
+      <div class="flex gap-2">
+        <button @click="loadZones()"
+                class="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300
+                       rounded-xl text-sm font-medium hover:bg-slate-100 transition-colors border border-slate-200 dark:border-slate-700">
+          <i data-lucide="refresh-cw" class="w-4 h-4" :class="loadingZones && 'animate-spin'"></i>
+          Actualiser
+        </button>
+        <button @click="showZoneForm = !showZoneForm; $nextTick(() => lucide.createIcons())"
+                class="flex items-center gap-2 px-4 py-2 gradient-brand text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity shadow-card">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          Nouvelle zone
+        </button>
+      </div>
+    </div>
+
+    <!-- Formulaire ajout / édition -->
+    <div x-show="showZoneForm" x-cloak
+         class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card p-5 mb-4">
+      <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+        <i data-lucide="map-pin" class="w-4 h-4 text-brand-500"></i>
+        <span x-text="zoneForm.id ? 'Modifier la zone' : 'Nouvelle zone'"></span>
+      </h3>
+
+      <div x-show="zoneMsg"
+           :class="zoneMsgOk ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 text-emerald-600' : 'bg-red-50 dark:bg-red-900/20 border-red-200 text-red-600'"
+           class="flex items-center gap-2 border rounded-lg px-3 py-2 mb-3 text-xs">
+        <i :data-lucide="zoneMsgOk ? 'check-circle' : 'alert-circle'" class="w-3.5 h-3.5 flex-shrink-0"></i>
+        <span x-text="zoneMsg"></span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <!-- Slug -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">
+            Identifiant (slug) <span class="text-red-400">*</span>
+          </label>
+          <input x-model="zoneForm.name" type="text" placeholder="salle-a101"
+                 :disabled="!!zoneForm.id"
+                 class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700
+                        bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-mono
+                        focus:outline-none focus:ring-2 focus:ring-brand-400 disabled:opacity-50">
+          <p class="text-[10px] text-slate-400 mt-0.5">Envoyé par l'ESP32 dans le champ <code>"zone"</code></p>
+        </div>
+        <!-- Label -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">
+            Libellé affiché <span class="text-red-400">*</span>
+          </label>
+          <input x-model="zoneForm.label" type="text" placeholder="Salle A101"
+                 class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700
+                        bg-white dark:bg-slate-700 text-slate-900 dark:text-white
+                        focus:outline-none focus:ring-2 focus:ring-brand-400">
+        </div>
+        <!-- Bâtiment -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Bâtiment</label>
+          <input x-model="zoneForm.building" type="text" placeholder="Bât. A"
+                 class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700
+                        bg-white dark:bg-slate-700 text-slate-900 dark:text-white
+                        focus:outline-none focus:ring-2 focus:ring-brand-400">
+        </div>
+        <!-- Étage -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Étage</label>
+          <input x-model.number="zoneForm.floor" type="number" min="-5" max="99" placeholder="1"
+                 class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700
+                        bg-white dark:bg-slate-700 text-slate-900 dark:text-white
+                        focus:outline-none focus:ring-2 focus:ring-brand-400">
+        </div>
+        <!-- Salle -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Salle</label>
+          <input x-model="zoneForm.room" type="text" placeholder="A101"
+                 class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700
+                        bg-white dark:bg-slate-700 text-slate-900 dark:text-white
+                        focus:outline-none focus:ring-2 focus:ring-brand-400">
+        </div>
+      </div>
+
+      <!-- GPS -->
+      <div class="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-3 border border-blue-100 dark:border-blue-900/30 mb-4">
+        <p class="text-xs font-semibold text-blue-500 mb-2 flex items-center gap-1.5">
+          <i data-lucide="navigation" class="w-3.5 h-3.5"></i>
+          Coordonnées GPS <span class="text-red-400">*</span>
+        </p>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Latitude</label>
+            <input x-model="zoneForm.lat" type="number" step="0.000001" placeholder="46.0878"
+                   class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700
+                          bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-mono
+                          focus:outline-none focus:ring-2 focus:ring-blue-400">
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Longitude</label>
+            <input x-model="zoneForm.lng" type="number" step="0.000001" placeholder="-64.7782"
+                   class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700
+                          bg-white dark:bg-slate-700 text-slate-900 dark:text-white font-mono
+                          focus:outline-none focus:ring-2 focus:ring-blue-400">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button @click="submitZone()"
+                class="px-5 py-2 gradient-brand text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity shadow-card">
+          <span x-text="zoneForm.id ? 'Sauvegarder' : 'Créer'"></span>
+        </button>
+        <button @click="resetZoneForm()"
+                class="px-5 py-2 text-sm text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700
+                       rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+          Annuler
+        </button>
+      </div>
+    </div>
+
+    <!-- Table des zones -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-slate-50 dark:bg-slate-700/30">
+              <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Slug</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Libellé</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Localisation</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Coordonnées GPS</th>
+              <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="z in zones" :key="z.id">
+              <tr class="border-t border-gray-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
+                <td class="px-5 py-3.5">
+                  <code class="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded font-mono" x-text="z.name"></code>
+                </td>
+                <td class="px-4 py-3.5 font-semibold text-slate-800 dark:text-slate-200" x-text="z.label"></td>
+                <td class="px-4 py-3.5 text-xs text-slate-500">
+                  <span x-text="[z.building, z.floor != null ? 'Étage ' + z.floor : '', z.room].filter(Boolean).join(' · ') || '—'"></span>
+                </td>
+                <td class="px-4 py-3.5 text-xs font-mono text-slate-400"
+                    x-text="z.lat.toFixed(5) + ', ' + z.lng.toFixed(5)"></td>
+                <td class="px-4 py-3.5 text-center">
+                  <div class="flex items-center justify-center gap-1">
+                    <button @click="editZone(z)"
+                            class="p-1.5 text-blue-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                            title="Modifier">
+                      <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button @click="deleteZone(z)"
+                            class="p-1.5 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            title="Supprimer">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+            <tr x-show="zones.length === 0 && !loadingZones">
+              <td colspan="5" class="px-5 py-12 text-center text-slate-400 text-sm">
+                <i data-lucide="map-pin" class="w-8 h-8 mx-auto mb-2 opacity-20"></i>
+                <p class="font-medium">Aucune zone définie</p>
+                <p class="text-xs mt-1">Créez une zone pour que l'ESP32 puisse s'y référer par son slug</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /tab zones -->
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function adminPage() {
+  return {
+    tab: 'users',
+    users: [], loading: false, msg: '', msgOk: false,
+    clients: [], loadingClients: false,
+    clientView: 'list',
+    selectedClient: null,
+    selectedDevice: null,
+    zones: [], loadingZones: false,
+    showZoneForm: false,
+    zoneForm: { id: null, name: '', label: '', building: '', floor: null, room: '', lat: null, lng: null },
+    zoneMsg: '', zoneMsgOk: false,
+
+    async init() {
+      await this.loadUsers();
+      lucide.createIcons();
+    },
+
+    async loadUsers() {
+      this.loading = true;
+      try {
+        const r = await fetch('/api/v1/admin/users');
+        if (r.ok) { this.users = await r.json(); }
+        else { this.showMsg('Erreur de chargement', false); }
+      } catch(e) { this.showMsg('Erreur réseau', false); }
+      finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }
+    },
+
+    async toggleAdmin(u) {
+      await this.patchUser(u.id, { is_admin: !u.is_admin });
+    },
+
+    async toggleActive(u) {
+      await this.patchUser(u.id, { is_active: !u.is_active });
+    },
+
+    async deactivate(u) {
+      if (!confirm(`Désactiver le compte de "${u.username}" ?`)) return;
+      try {
+        const r = await fetch(`/api/v1/admin/users/${u.id}`, { method: 'DELETE' });
+        const d = await r.json();
+        this.showMsg(d.message || d.detail, r.ok);
+        if (r.ok) await this.loadUsers();
+      } catch(e) { this.showMsg('Erreur réseau', false); }
+    },
+
+    async patchUser(id, data) {
+      try {
+        const r = await fetch(`/api/v1/admin/users/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const d = await r.json();
+        this.showMsg(d.message || d.detail, r.ok);
+        if (r.ok) await this.loadUsers();
+      } catch(e) { this.showMsg('Erreur réseau', false); }
+    },
+
+    async loadClients() {
+      this.loadingClients = true;
+      try {
+        const r = await fetch('/api/v1/admin/clients');
+        if (r.ok) { this.clients = await r.json(); }
+      } catch(e) {}
+      finally { this.loadingClients = false; this.$nextTick(() => lucide.createIcons()); }
+    },
+
+    selectClient(c) {
+      this.selectedClient = c;
+      this.clientView = 'devices';
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    selectDevice(d) {
+      this.selectedDevice = d;
+      this.clientView = 'detail';
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    backToClients() {
+      this.clientView = 'list';
+      this.selectedClient = null;
+      this.selectedDevice = null;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    backToDevices() {
+      this.clientView = 'devices';
+      this.selectedDevice = null;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    showMsg(text, ok) {
+      this.msg = text; this.msgOk = ok;
+      this.$nextTick(() => lucide.createIcons());
+      setTimeout(() => { this.msg = ''; }, 4000);
+    },
+
+    // ── Zones ──────────────────────────────────────────────────
+    async loadZones() {
+      this.loadingZones = true;
+      try {
+        const r = await fetch('/api/v1/zones/');
+        if (r.ok) { this.zones = await r.json(); }
+      } catch(e) {}
+      finally { this.loadingZones = false; this.$nextTick(() => lucide.createIcons()); }
+    },
+
+    editZone(z) {
+      this.zoneForm = { ...z };
+      this.showZoneForm = true;
+      this.zoneMsg = '';
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    resetZoneForm() {
+      this.zoneForm = { id: null, name: '', label: '', building: '', floor: null, room: '', lat: null, lng: null };
+      this.showZoneForm = false;
+      this.zoneMsg = '';
+    },
+
+    async submitZone() {
+      this.zoneMsg = '';
+      const isEdit = !!this.zoneForm.id;
+      const url    = isEdit ? `/api/v1/zones/${this.zoneForm.id}` : '/api/v1/zones/';
+      const method = isEdit ? 'PUT' : 'POST';
+      const payload = { ...this.zoneForm };
+      if (payload.lat)   payload.lat   = parseFloat(payload.lat);
+      if (payload.lng)   payload.lng   = parseFloat(payload.lng);
+      if (payload.floor != null) payload.floor = parseInt(payload.floor);
+      try {
+        const r = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const d = await r.json();
+        this.zoneMsg = d.message || d.detail;
+        this.zoneMsgOk = r.ok;
+        if (r.ok) { await this.loadZones(); this.resetZoneForm(); }
+      } catch(e) { this.zoneMsg = 'Erreur réseau'; this.zoneMsgOk = false; }
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async deleteZone(z) {
+      if (!confirm(`Supprimer la zone "${z.label}" (${z.name}) ?`)) return;
+      const r = await fetch(`/api/v1/zones/${z.id}`, { method: 'DELETE' });
+      if (r.ok) { await this.loadZones(); }
+    },
+  };
+}
+</script>
+{% endblock %}

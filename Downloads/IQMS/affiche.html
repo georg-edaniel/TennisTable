@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="fr" x-data="{ dark: false }" :class="dark ? 'dark' : ''">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AQIMS — Architecture Électronique</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:'#ecfeff', 100:'#cffafe', 500:'#06b6d4', 600:'#0891b2', 700:'#0e7490', 900:'#164e63' }
+          },
+          fontFamily: { sans: ['Inter','system-ui','sans-serif'] }
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <style>
+    [x-cloak]{ display:none!important }
+    body{ font-family:'Inter',system-ui,sans-serif; transition: background-color .3s, color .3s; }
+    .card-shadow{ box-shadow: 0 2px 16px 0 rgba(0,0,0,.08); }
+    .dark .card-shadow{ box-shadow: 0 2px 16px 0 rgba(0,0,0,.5); }
+    .arch-arrow{ position:relative; }
+    .arch-arrow::after{
+      content:''; display:block; width:32px; height:2px;
+      background:currentColor; opacity:.4;
+      position:absolute; right:-34px; top:50%; transform:translateY(-50%);
+    }
+    .arch-arrow:last-child::after{ display:none; }
+    @media print{
+      .no-print{ display:none!important; }
+      body{ background:white!important; color:black!important; }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
+
+<!-- ═══════════════════════ TOGGLE MODE ═══════════════════════ -->
+<div class="no-print fixed top-4 right-4 z-50 flex items-center gap-2">
+  <span class="text-xs font-medium text-gray-500 dark:text-gray-400" x-text="dark ? 'Mode nuit' : 'Mode jour'"></span>
+  <button
+    @click="dark = !dark"
+    class="relative w-14 h-7 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
+    :class="dark ? 'bg-brand-600' : 'bg-gray-300'"
+    :aria-label="dark ? 'Passer en mode jour' : 'Passer en mode nuit'"
+  >
+    <span
+      class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform duration-300 flex items-center justify-center"
+      :class="dark ? 'translate-x-7' : 'translate-x-0'"
+    >
+      <i :data-lucide="dark ? 'moon' : 'sun'" class="w-3.5 h-3.5 text-gray-600"></i>
+    </span>
+  </button>
+</div>
+
+<!-- ═══════════════════════ EN-TÊTE ═══════════════════════════ -->
+<header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 card-shadow">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
+
+      <!-- Logo -->
+      <div class="flex-shrink-0 w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg">
+        <i data-lucide="wind" class="w-10 h-10 text-white"></i>
+      </div>
+
+      <!-- Titre -->
+      <div class="text-center md:text-left">
+        <div class="flex items-center gap-3 justify-center md:justify-start mb-1">
+          <span class="text-xs font-semibold uppercase tracking-widest text-brand-500 bg-brand-50 dark:bg-brand-900/30 px-3 py-1 rounded-full">
+            ENUMA · Mai 2024
+          </span>
+          <span class="text-xs font-semibold uppercase tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">
+            IoT &amp; Embarqué
+          </span>
+        </div>
+        <h1 class="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+          AQIMS
+        </h1>
+        <p class="text-lg font-medium text-brand-600 dark:text-brand-400 mt-0.5">
+          Air Quality Index Monitoring System
+        </p>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400 max-w-2xl">
+          Système embarqué de surveillance de la qualité de l'air en temps réel — ESP32 Thing Plus,
+          capteurs multi-paramètres, transmission MQTT/TLS, backend FastAPI et tableau de bord web.
+        </p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════════════════ CHAÎNE IOT ════════════════════════ -->
+<section class="max-w-7xl mx-auto px-6 pt-10 pb-2">
+  <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">
+    Chaîne de traitement IoT
+  </h2>
+  <div class="bg-white dark:bg-gray-900 rounded-2xl card-shadow border border-gray-100 dark:border-gray-800 p-6">
+    <div class="flex flex-wrap justify-center items-center gap-2 md:gap-0">
+
+      <!-- Capteurs -->
+      <div class="arch-arrow flex flex-col items-center gap-2 px-4 md:px-6">
+        <div class="w-14 h-14 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+          <i data-lucide="thermometer" class="w-7 h-7 text-amber-600 dark:text-amber-400"></i>
+        </div>
+        <span class="text-xs font-semibold text-center text-gray-700 dark:text-gray-300">Capteurs<br/>DHT22 · MQ7 · LDR<br/>DS18B20</span>
+      </div>
+
+      <span class="hidden md:block text-gray-300 dark:text-gray-700 text-2xl mx-1">→</span>
+
+      <!-- ESP32 -->
+      <div class="arch-arrow flex flex-col items-center gap-2 px-4 md:px-6">
+        <div class="w-14 h-14 rounded-xl bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center">
+          <i data-lucide="cpu" class="w-7 h-7 text-cyan-600 dark:text-cyan-400"></i>
+        </div>
+        <span class="text-xs font-semibold text-center text-gray-700 dark:text-gray-300">ESP32<br/>Thing Plus</span>
+      </div>
+
+      <span class="hidden md:block text-gray-300 dark:text-gray-700 text-2xl mx-1">→</span>
+
+      <!-- MQTT TLS -->
+      <div class="arch-arrow flex flex-col items-center gap-2 px-4 md:px-6">
+        <div class="w-14 h-14 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+          <i data-lucide="lock" class="w-7 h-7 text-violet-600 dark:text-violet-400"></i>
+        </div>
+        <span class="text-xs font-semibold text-center text-gray-700 dark:text-gray-300">MQTT / TLS<br/>QoS 2<br/>EMQX 5</span>
+      </div>
+
+      <span class="hidden md:block text-gray-300 dark:text-gray-700 text-2xl mx-1">→</span>
+
+      <!-- Backend -->
+      <div class="arch-arrow flex flex-col items-center gap-2 px-4 md:px-6">
+        <div class="w-14 h-14 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+          <i data-lucide="server" class="w-7 h-7 text-green-600 dark:text-green-400"></i>
+        </div>
+        <span class="text-xs font-semibold text-center text-gray-700 dark:text-gray-300">FastAPI<br/>InfluxDB<br/>PostgreSQL</span>
+      </div>
+
+      <span class="hidden md:block text-gray-300 dark:text-gray-700 text-2xl mx-1">→</span>
+
+      <!-- Dashboard -->
+      <div class="flex flex-col items-center gap-2 px-4 md:px-6">
+        <div class="w-14 h-14 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+          <i data-lucide="layout-dashboard" class="w-7 h-7 text-blue-600 dark:text-blue-400"></i>
+        </div>
+        <span class="text-xs font-semibold text-center text-gray-700 dark:text-gray-300">Dashboard<br/>WebSocket<br/>AQI Temps réel</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ IMAGES ARCHITECTURE ═══════════════ -->
+<section class="max-w-7xl mx-auto px-6 py-8">
+  <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">
+    Architecture électronique de la carte
+  </h2>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Image 1 : Schéma électronique -->
+    <div class="bg-white dark:bg-gray-900 rounded-2xl card-shadow border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+          <i data-lucide="git-branch" class="w-4 h-4 text-red-600 dark:text-red-400"></i>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Schéma de câblage</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Brochage ESP32 — DHT22 · LDR · MQ7 · DS18B20</p>
+        </div>
+        <span class="ml-auto text-xs text-gray-400 dark:text-gray-600">Fig. 1</span>
+      </div>
+      <div class="p-4 bg-gray-50 dark:bg-gray-950/50 flex items-center justify-center" style="min-height:340px">
+        <img
+          src="IMG_3178.jpeg"
+          alt="Schéma de câblage ENUMA Air Quality Monitor — ESP32 Thing Plus avec DHT22, LDR, MQ7, DS18B20"
+          class="w-full h-auto max-h-[420px] object-contain rounded-lg shadow dark:brightness-90"
+          loading="lazy"
+        />
+      </div>
+      <div class="px-5 py-3 bg-gray-50 dark:bg-gray-950/50 border-t border-gray-100 dark:border-gray-800">
+        <p class="text-xs text-gray-500 dark:text-gray-500 italic">
+          © ENUMA — Air Quality Monitoring · Mai 2024 · Réalisation du schéma de la carte électronique
+        </p>
+      </div>
+    </div>
+
+    <!-- Image 2 : Rendu 3D PCB -->
+    <div class="bg-white dark:bg-gray-900 rounded-2xl card-shadow border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+          <i data-lucide="layers" class="w-4 h-4 text-orange-600 dark:text-orange-400"></i>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">Rendu 3D du PCB</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">EasyEDA — Vue 3D de la carte imprimée</p>
+        </div>
+        <span class="ml-auto text-xs text-gray-400 dark:text-gray-600">Fig. 2</span>
+      </div>
+      <div class="p-4 bg-gray-50 dark:bg-gray-950/50 flex items-center justify-center" style="min-height:340px">
+        <img
+          src="IMG_3179.jpeg"
+          alt="Rendu 3D PCB ENUMA Air Quality Monitor — ESP32 Thing Plus avec composants montés"
+          class="w-full h-auto max-h-[420px] object-contain rounded-lg shadow dark:brightness-90"
+          loading="lazy"
+        />
+      </div>
+      <div class="px-5 py-3 bg-gray-50 dark:bg-gray-950/50 border-t border-gray-100 dark:border-gray-800">
+        <p class="text-xs text-gray-500 dark:text-gray-500 italic">
+          © ENUMA — Air Quality Monitor · Mai 2024 · Vue 3D générée avec EasyEDA / EasyPCB
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ COMPOSANTS ════════════════════════ -->
+<section class="max-w-7xl mx-auto px-6 pb-8">
+  <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">
+    Composants de la carte
+  </h2>
+
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+
+    <!-- ESP32 Thing Plus -->
+    <div class="bg-white dark:bg-gray-900 rounded-xl card-shadow border border-gray-100 dark:border-gray-800 p-4 flex flex-col gap-2">
+      <div class="w-10 h-10 rounded-lg bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center">
+        <i data-lucide="cpu" class="w-5 h-5 text-cyan-600 dark:text-cyan-400"></i>
+      </div>
+      <p class="text-sm font-bold text-gray-900 dark:text-gray-100">ESP32<br/>Thing Plus</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400">Microcontrôleur Wi-Fi/BT · 240 MHz · 4 MB Flash</p>
+      <div class="mt-auto">
+        <span class="text-xs bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400 px-2 py-0.5 rounded-full font-medium">Unité centrale</span>
+      </div>
+    </div>
+
+    <!-- DHT22 -->
+    <div class="bg-white dark:bg-gray-900 rounded-xl card-shadow border border-gray-100 dark:border-gray-800 p-4 flex flex-col gap-2">
+      <div class="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+        <i data-lucide="thermometer" class="w-5 h-5 text-amber-600 dark:text-amber-400"></i>
+      </div>
+      <p class="text-sm font-bold text-gray-900 dark:text-gray-100">DHT22</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400">Température &amp; Humidité · A0 (GPIO17) · 3.3 V · R2 10 kΩ</p>
+      <div class="mt-auto">
+        <span class="text-xs bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">Capteur T°/HR</span>
+      </div>
+    </div>
+
+    <!-- LDR -->
+    <div class="bg-white dark:bg-gray-900 rounded-xl card-shadow border border-gray-100 dark:border-gray-800 p-4 flex flex-col gap-2">
+      <div class="w-10 h-10 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+        <i data-lucide="sun" class="w-5 h-5 text-yellow-600 dark:text-yellow-400"></i>
+      </div>
+      <p class="text-sm font-bold text-gray-900 dark:text-gray-100">LDR</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400">Luminosité · A1 (GPIO18) · Diviseur R4 10 kΩ</p>
+      <div class="mt-auto">
+        <span class="text-xs bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 px-2 py-0.5 rounded-full font-medium">Lumière</span>
+      </div>
+    </div>
+
+    <!-- MQ7 -->
+    <div class="bg-white dark:bg-gray-900 rounded-xl card-shadow border border-gray-100 dark:border-gray-800 p-4 flex flex-col gap-2">
+      <div class="w-10 h-10 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+        <i data-lucide="wind" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+      </div>
+      <p class="text-sm font-bold text-gray-900 dark:text-gray-100">MQ7</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400">CO / Gaz · A2 (GPIO19) · VBUS · R3 470 Ω · R5 1 kΩ</p>
+      <div class="mt-auto">
+        <span class="text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full font-medium">CO / Air</span>
+      </div>
+    </div>
+
+    <!-- DS18B20 -->
+    <div class="bg-white dark:bg-gray-900 rounded-xl card-shadow border border-gray-100 dark:border-gray-800 p-4 flex flex-col gap-2">
+      <div class="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+        <i data-lucide="gauge" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+      </div>
+      <p class="text-sm font-bold text-gray-900 dark:text-gray-100">DS18B20</p>
+      <p class="text-xs text-gray-500 dark:text-gray-400">T° numérique 1-Wire · GPIO23 (5_SCK) · R1 4.7 kΩ</p>
+      <div class="mt-auto">
+        <span class="text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full font-medium">T° 1-Wire</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════ STACK LOGICIEL ════════════════════ -->
+<section class="max-w-7xl mx-auto px-6 pb-10">
+  <h2 class="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">
+    Stack logicielle
+  </h2>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+    <!-- Firmware -->
+    <div class="bg-white dark:bg-gray-900 rounded-2xl card-shadow border border-gray-100 dark:border-gray-800 p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+          <i data-lucide="microchip" class="w-5 h-5 text-orange-600 dark:text-orange-400"></i>
+        </div>
+        <p class="font-semibold text-gray-900 dark:text-gray-100">Firmware ESP32</p>
+      </div>
+      <ul class="space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>Arduino IDE / PlatformIO</li>
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>MQTT TLS · QoS 2 · Auth certificat</li>
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>FOTA — signature HMAC-SHA256</li>
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>AQI calculé embarqué (EPA)</li>
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>Watchdog · Deep Sleep · OTA</li>
+      </ul>
+    </div>
+
+    <!-- Backend -->
+    <div class="bg-white dark:bg-gray-900 rounded-2xl card-shadow border border-gray-100 dark:border-gray-800 p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+          <i data-lucide="server" class="w-5 h-5 text-green-600 dark:text-green-400"></i>
+        </div>
+        <p class="font-semibold text-gray-900 dark:text-gray-100">Backend Python</p>
+      </div>
+      <ul class="space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0"></span>FastAPI + SQLAlchemy async</li>
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0"></span>PostgreSQL (prod) · SQLite (dev)</li>
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0"></span>InfluxDB 2.x — séries temporelles</li>
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0"></span>JWT + Argon2 + 2FA TOTP</li>
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0"></span>Rate limiting · Alertes auto</li>
+      </ul>
+    </div>
+
+    <!-- Infra -->
+    <div class="bg-white dark:bg-gray-900 rounded-2xl card-shadow border border-gray-100 dark:border-gray-800 p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+          <i data-lucide="container" class="w-5 h-5 text-violet-600 dark:text-violet-400"></i>
+        </div>
+        <p class="font-semibold text-gray-900 dark:text-gray-100">Infrastructure</p>
+      </div>
+      <ul class="space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>Docker Compose · 5 services</li>
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>EMQX 5 — broker MQTT TLS 1.3</li>
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>Nginx — reverse proxy HTTPS</li>
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>Redis — cache &amp; pub/sub</li>
+        <li class="flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>WebSocket — push temps réel</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ PIED DE PAGE ══════════════════════ -->
+<footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-4">
+  <div class="max-w-7xl mx-auto px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <div class="w-6 h-6 rounded-md bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+        <i data-lucide="wind" class="w-3.5 h-3.5 text-white"></i>
+      </div>
+      <span class="text-sm font-semibold text-gray-900 dark:text-gray-100">AQIMS</span>
+      <span class="text-xs text-gray-400 dark:text-gray-600">v1.0.0</span>
+    </div>
+    <p class="text-xs text-gray-400 dark:text-gray-600 text-center">
+      Air Quality Index Monitoring System · ENUMA · 2024 · Projet IoT Embarqué
+    </p>
+    <div class="flex items-center gap-3">
+      <span class="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        Système opérationnel
+      </span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Initialise Lucide icons + réinitialise après toggle AlpineJS
+  document.addEventListener('alpine:initialized', () => {
+    lucide.createIcons();
+    document.addEventListener('alpine:updated', () => lucide.createIcons());
+  });
+  lucide.createIcons();
+</script>
+</body>
+</html>

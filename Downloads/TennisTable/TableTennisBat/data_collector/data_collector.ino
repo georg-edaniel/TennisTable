@@ -1,17 +1,18 @@
 /*
-  TableTennis — Collecte de données pour Edge Impulse
-  ====================================================
-  Envoie accX,accY,accZ,gyrX,gyrY,gyrZ à 50Hz sur le port série.
+  TableTennis — Collecte de données pour Edge Impulse (9 axes)
+  =============================================================
+  Envoie accX,accY,accZ,gyrX,gyrY,gyrZ,magX,magY,magZ à 50Hz.
   Utiliser avec : edge-impulse-data-forwarder
 
   PROCÉDURE :
     1. Flasher ce sketch sur le Nano 33 BLE Rev 2
     2. Ouvrir un terminal : edge-impulse-data-forwarder
     3. Sélectionner le projet 839469
-    4. Dans Edge Impulse Studio → Data acquisition
-       - Choisir le label (BHdrive, BHsmash, FHdrive, FHloop, FHsmash)
-       - Durée : 2000ms (2 secondes par coup)
-       - Enregistrer 40-50 coups par classe
+    4. Dans Edge Impulse Studio → Create Impulse :
+       - Axes : accX, accY, accZ, gyrX, gyrY, gyrZ, magX, magY, magZ
+    5. Dans Data acquisition :
+       - Label (BHdrive, BHsmash, FHdrive, FHloop, FHsmash)
+       - Durée : 2000ms | 40-50 coups par classe
 */
 
 #include <Arduino_BMI270_BMM150.h>
@@ -31,10 +32,9 @@ void setup() {
     while (1);
   }
 
-  // Header requis par edge-impulse-data-forwarder
-  // Format: "accX accY accZ gyrX gyrY gyrZ"
-  Serial.println("Inertial Measurement Unit");
-  Serial.println("accX accY accZ gyrX gyrY gyrZ");
+  // Header requis par edge-impulse-data-forwarder (9 axes)
+  Serial.println("Inertial Measurement Unit + Magnetometer");
+  Serial.println("accX accY accZ gyrX gyrY gyrZ magX magY magZ");
 }
 
 void loop() {
@@ -42,11 +42,18 @@ void loop() {
   if (now - lastSample < INTERVAL_MS) return;
   lastSample = now;
 
-  if (!IMU.accelerometerAvailable() || !IMU.gyroscopeAvailable()) return;
+  if (!IMU.accelerationAvailable() || !IMU.gyroscopeAvailable()) return;
 
-  float ax, ay, az, gx, gy, gz;
-  IMU.readAccelerometer(ax, ay, az);
+  float ax, ay, az, gx, gy, gz, mx, my, mz;
+  IMU.readAcceleration(ax, ay, az);
   IMU.readGyroscope(gx, gy, gz);
+
+  // Magnétomètre — valeur 0 si non disponible ce cycle
+  if (IMU.magneticFieldAvailable()) {
+    IMU.readMagneticField(mx, my, mz);
+  } else {
+    mx = my = mz = 0.0f;
+  }
 
   // Format CSV attendu par le data-forwarder
   Serial.print(ax, 6); Serial.print(",");
@@ -54,5 +61,8 @@ void loop() {
   Serial.print(az, 6); Serial.print(",");
   Serial.print(gx, 6); Serial.print(",");
   Serial.print(gy, 6); Serial.print(",");
-  Serial.println(gz, 6);
+  Serial.print(gz, 6); Serial.print(",");
+  Serial.print(mx, 6); Serial.print(",");
+  Serial.print(my, 6); Serial.print(",");
+  Serial.println(mz, 6);
 }

@@ -1,0 +1,10 @@
+INFO:     Will watch for changes in these directories: ['C:\\Users\\HP\\Downloads\\IQMS\\backend']
+INFO:     Uvicorn running on http://0.0.0.0:8005 (Press CTRL+C to quit)
+INFO:     Started reloader process [45792] using WatchFiles
+INFO:     Started server process [80188]
+INFO:     Waiting for application startup.
+2026-05-07 11:51:09,590 [INFO] main — \U0001f680 Démarrage AQIMS Backend...
+2026-05-07 11:51:09,603 [INFO] main — \u2705 Tables DB créées/vérifiées
+2026-05-07 11:51:09,832 [WARNING] main — \u26a0\ufe0f  MQTT non disponible (dev local) : [Errno 2] No such file or directory
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'models\alert.py'. Reloading...

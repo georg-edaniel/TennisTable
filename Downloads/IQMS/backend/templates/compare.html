@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% block title %}Comparer les zones{% endblock %}
+{% block page_title %}Comparaison des zones{% endblock %}
+
+{% block content %}
+<div x-data="comparePage()" x-init="init()">
+
+  <!-- ── En-tête style BrainBox ────────────────────────────── -->
+  <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-6 mb-6 shadow-card">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 gradient-brand rounded-xl flex items-center justify-center shadow-card">
+          <i data-lucide="bar-chart-2" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white">Analyse comparative des zones</h2>
+          <p class="text-sm text-slate-400">Classement par indice de qualité de l'air — Étape 04 du cycle</p>
+        </div>
+      </div>
+      <button @click="loadData()"
+              class="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20
+                     text-brand-700 dark:text-brand-400 rounded-xl text-sm font-medium
+                     hover:bg-brand-100 dark:hover:bg-brand-900/30 transition-colors border border-emerald-100 dark:border-emerald-800">
+        <i data-lucide="refresh-cw" class="w-4 h-4" :class="loading && 'animate-spin'"></i>
+        Actualiser
+      </button>
+    </div>
+  </div>
+
+  <!-- ── KPIs comparaison ─────────────────────────────────── -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-4 shadow-card">
+      <p class="text-xs text-slate-400 font-medium mb-1">Zones surveillées</p>
+      <p class="text-3xl font-bold text-slate-900 dark:text-white" x-text="zones.length"></p>
+    </div>
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-4 shadow-card">
+      <p class="text-xs text-slate-400 font-medium mb-1">Meilleure zone</p>
+      <p class="text-lg font-bold text-emerald-500 truncate" x-text="bestZone?.name||'—'"></p>
+      <p class="text-xs text-emerald-400 font-medium" x-text="bestZone ? 'AQI '+bestZone.aqi : ''"></p>
+    </div>
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-4 shadow-card">
+      <p class="text-xs text-slate-400 font-medium mb-1">Zone critique</p>
+      <p class="text-lg font-bold text-red-500 truncate" x-text="worstZone?.name||'—'"></p>
+      <p class="text-xs text-red-400 font-medium" x-text="worstZone ? 'AQI '+worstZone.aqi : ''"></p>
+    </div>
+    <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl p-4 shadow-card">
+      <p class="text-xs text-slate-400 font-medium mb-1">AQI moyen</p>
+      <p class="text-3xl font-bold" :style="`color:${avgColor}`" x-text="avgAqi||'—'"></p>
+    </div>
+  </div>
+
+  <!-- ── Graphique barres + classement ────────────────────── -->
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-6">
+
+    <!-- Graphique horizontal style BrainBox -->
+    <div class="lg:col-span-3 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-5 shadow-card">
+      <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">Classement AQI par zone</h3>
+      <p class="text-xs text-slate-400 mb-4">Plus l'AQI est bas, meilleure est la qualité de l'air</p>
+      <div id="compare-chart" style="height:300px;"></div>
+    </div>
+
+    <!-- Classement carte style BrainBox -->
+    <div class="lg:col-span-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Score qualité de l'air</h3>
+        <p class="text-xs text-slate-400">100 = parfait · 0 = critique</p>
+      </div>
+      <div class="divide-y divide-slate-50 dark:divide-slate-800/50">
+        <template x-for="(z, i) in zonesRanked" :key="z.device_id">
+          <div class="px-5 py-3.5">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2.5">
+                <span class="text-sm font-bold text-slate-400 w-5 text-right" x-text="i+1"></span>
+                <div>
+                  <p class="text-sm font-semibold text-slate-800 dark:text-slate-100" x-text="z.name"></p>
+                  <p class="text-xs text-slate-400" x-text="z.building !== '—' ? z.building+' · '+z.floor : z.location"></p>
+                </div>
+              </div>
+              <span class="text-sm font-bold px-2 py-0.5 rounded-lg"
+                    :style="`background:${z.aqi_color}18;color:${z.aqi_color}`"
+                    x-text="z.aqi||'—'"></span>
+            </div>
+            <!-- Barre de progression -->
+            <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5">
+              <div class="h-1.5 rounded-full transition-all duration-500"
+                   :style="`width:${z.score}%;background-color:${z.aqi_color}`"></div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-400 mt-1">
+              <span x-text="z.aqi_label"></span>
+              <span x-text="z.score+'% qualité'"></span>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tableau détaillé style BrainBox ──────────────────── -->
+  <div class="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-card overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Détail par zone — tous les capteurs</h3>
+        <p class="text-xs text-slate-400">Comparaison multi-métriques · Étape 04 du cycle Net Zero Building</p>
+      </div>
+      <button @click="exportCSV()"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400
+                     border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800
+                     transition-colors">
+        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+        Exporter CSV
+      </button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 dark:bg-slate-700/30">
+            <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Zone</th>
+            <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Statut</th>
+            <template x-for="col in sortCols" :key="col.field">
+              <th @click="setSort(col.field)"
+                  class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer select-none hover:text-slate-800 dark:hover:text-gray-200 transition-colors">
+                <span class="flex items-center justify-end gap-1">
+                  <span x-text="col.label"></span>
+                  <span x-show="sortField===col.field" class="text-emerald-500" x-text="sortDir==='asc' ? '↑' : '↓'"></span>
+                  <span x-show="sortField!==col.field" class="text-slate-300">↕</span>
+                </span>
+              </th>
+            </template>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="z in zonesRanked" :key="z.device_id">
+            <tr class="border-t border-gray-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-colors">
+              <td class="px-5 py-3.5">
+                <p class="font-semibold text-slate-900 dark:text-white text-sm" x-text="z.name"></p>
+                <p class="text-xs text-slate-400" x-text="z.location"></p>
+              </td>
+              <td class="px-4 py-3.5 text-center">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                      :class="z.is_online
+                        ? 'bg-emerald-50 dark:bg-emerald-900/20 text-brand-600 dark:text-brand-400'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-400'">
+                  <span class="w-1.5 h-1.5 rounded-full"
+                        :class="z.is_online ? 'bg-emerald-400' : 'bg-gray-400'"></span>
+                  <span x-text="z.is_online ? 'En ligne' : 'Hors ligne'"></span>
+                </span>
+              </td>
+              <td class="px-4 py-3.5 text-right">
+                <span class="font-bold text-base" :style="`color:${z.aqi_color}`" x-text="z.aqi||'—'"></span>
+              </td>
+              <td class="px-4 py-3.5 text-right text-sm font-medium"
+                  :class="(z.co_ppm||0)>9?'text-red-500':'text-slate-600 dark:text-slate-300'"
+                  x-text="z.co_ppm ? z.co_ppm+' ppm' : '—'"></td>
+              <td class="px-4 py-3.5 text-right text-sm text-slate-600 dark:text-slate-300"
+                  x-text="z.temperature ? z.temperature+'°C' : '—'"></td>
+              <td class="px-4 py-3.5 text-right text-sm text-slate-600 dark:text-slate-300"
+                  x-text="z.humidity ? z.humidity+'%' : '—'"></td>
+              <td class="px-4 py-3.5 text-right text-sm text-slate-600 dark:text-slate-300"
+                  x-text="z.lux ? z.lux+' lx' : '—'"></td>
+              <td class="px-4 py-3.5 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <div class="w-16 bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 hidden sm:block">
+                    <div class="h-1.5 rounded-full" :style="`width:${z.score}%;background:${z.aqi_color}`"></div>
+                  </div>
+                  <span class="text-sm font-bold" :style="`color:${z.aqi_color}`" x-text="z.score+'%'"></span>
+                </div>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="zones.length===0 && !loading">
+            <td colspan="8" class="px-5 py-12 text-center text-slate-400 text-sm">
+              <i data-lucide="bar-chart-2" class="w-8 h-8 mx-auto mb-2 opacity-20"></i>
+              Aucune donnée de comparaison disponible
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function comparePage() {
+  return {
+    zones: [], loading: false, chart: null,
+    sortField: 'aqi', sortDir: 'asc',
+
+    get zonesRanked() {
+      return [...this.zones].sort((a, b) => {
+        const va = a[this.sortField] ?? 0;
+        const vb = b[this.sortField] ?? 0;
+        return this.sortDir === 'asc' ? va - vb : vb - va;
+      });
+    },
+
+    setSort(field) {
+      if (this.sortField === field) { this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc'; }
+      else { this.sortField = field; this.sortDir = 'asc'; }
+    },
+    get bestZone()  { return this.zonesRanked[0] || null; },
+    get worstZone() { return this.zonesRanked[this.zonesRanked.length - 1] || null; },
+
+    sortCols: [
+      { field: 'aqi',         label: 'AQI'       },
+      { field: 'co_ppm',      label: 'CO (ppm)'  },
+      { field: 'temperature', label: 'Temp. °C'  },
+      { field: 'humidity',    label: 'Hum. %'    },
+      { field: 'lux',         label: 'Lux'       },
+      { field: 'score',       label: 'Score'     },
+    ],
+    get avgAqi() {
+      if (!this.zones.length) return 0;
+      return Math.round(this.zones.reduce((s,z)=>s+(z.aqi||0),0)/this.zones.length);
+    },
+    get avgColor() {
+      const v = this.avgAqi;
+      if (v<=50) return '#22c55e'; if (v<=100) return '#f59e0b';
+      if (v<=150) return '#f97316'; if (v<=200) return '#ef4444';
+      return '#8b5cf6';
+    },
+
+    async init() {
+      await this.loadData();
+      lucide.createIcons();
+      window.addEventListener('theme-change', () => this.renderChart());
+    },
+
+    async loadData() {
+      this.loading = true;
+      try {
+        const r = await fetch('/api/v1/dashboard/compare');
+        if (!r.ok) return;
+        const json = await r.json();
+        this.zones = json.zones || [];
+        this.$nextTick(() => { this.renderChart(); lucide.createIcons(); });
+      } catch(e) { console.warn(e); }
+      finally { this.loading = false; }
+    },
+
+    renderChart() {
+      const el = document.getElementById('compare-chart');
+      if (!el || !this.zones.length) return;
+      if (!this.chart) {
+        this.chart = echarts.init(el);
+        window.addEventListener('resize', () => this.chart?.resize());
+      }
+      const dark = document.documentElement.classList.contains('dark');
+      const c = dark
+        ? { axis:'#6b7280', grid:'#1f2937', bg:'transparent', text:'#f9fafb' }
+        : { axis:'#9ca3af', grid:'#f9fafb', bg:'transparent', text:'#111827' };
+
+      // Zones du plus mauvais (gauche) au meilleur (droite)
+      const sorted = [...this.zones].sort((a,b) => b.aqi - a.aqi);
+      const names  = sorted.map(z => z.name.length>14 ? z.name.slice(0,13)+'…' : z.name);
+      const values = sorted.map(z => z.aqi || 0);
+      const colors = sorted.map(z => z.aqi_color || '#9ca3af');
+
+      this.chart.setOption({
+        backgroundColor: c.bg,
+        tooltip: {
+          trigger: 'axis',
+          formatter: (params) => {
+            const z = sorted[params[0].dataIndex];
+            return `<b>${z.name}</b><br>AQI: <b style="color:${z.aqi_color}">${z.aqi}</b><br>${z.aqi_label}<br>CO: ${z.co_ppm} ppm`;
+          }
+        },
+        grid: { left:140, right:40, top:10, bottom:30 },
+        xAxis: {
+          type: 'value',
+          max: 300,
+          axisLabel: { color: c.axis, fontSize:10 },
+          splitLine: { lineStyle: { color: c.grid } },
+        },
+        yAxis: {
+          type: 'category', data: names.reverse(),
+          axisLabel: { color: c.text, fontSize:11, fontWeight:'bold' },
+          axisLine: { show: false },
+        },
+        series:[{
+          type: 'bar',
+          data: values.reverse().map((v,i) => ({
+            value: v,
+            itemStyle: { color: colors[colors.length-1-i], borderRadius:[0,6,6,0] }
+          })),
+          barMaxWidth: 32,
+          label: { show:true, position:'right', color:c.axis, fontSize:11, fontWeight:'600',
+                   formatter: (p) => p.value || '—' },
+        }],
+      });
+    },
+
+    exportCSV() {
+      const headers = 'Zone,Bâtiment,Étage,Statut,AQI,Qualité,CO_ppm,Temp_C,Humidité_%,Lux,Score\n';
+      const rows = this.zones.map(z =>
+        `"${z.name}","${z.building||''}","${z.floor||''}","${z.is_online?'En ligne':'Hors ligne'}",` +
+        `${z.aqi||0},"${z.aqi_label}",${z.co_ppm||0},${z.temperature||0},${z.humidity||0},${z.lux||0},${z.score||0}`
+      ).join('\n');
+      const blob = new Blob([headers+rows], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `aqims_zones_${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+    },
+  };
+}
+</script>
+{% endblock %}

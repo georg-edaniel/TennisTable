@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(pip3 list:*)",
+      "Bash(pip3 show:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(sed:*)",
+      "Bash(netstat:*)",
+      "Bash(curl:*)",
+      "Bash(ls:*)",
+      "Bash(do:*)",
+      "Bash(taskkill:*)",
+      "Bash(rm:*)",
+      "Bash(grep:*)",
+      "Bash(USE_SQLITE=true python:*)",
+      "Bash(wc:*)",
+      "Bash(cmd:*)",
+      "Bash(powershell:*)",
+      "Bash(USE_SQLITE=true uvicorn main:app:*)",
+      "Bash(USE_SQLITE=true SECRET_KEY=ci-test-secret-key-32chars-minimum APP_ENV=development python:*)",
+      "Bash(cat:*)",
+      "Bash(pkill:*)",
+      "Bash(tasklist:*)",
+      "Bash(gh repo:*)",
+      "Bash(git:*)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch:*)"
+    ]
+  }
+}

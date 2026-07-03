@@ -1,4 +1,5 @@
 """Alembic environment — uses our SQLAlchemy models for autogenerate."""
+import os
 import sys
 from pathlib import Path
 from logging.config import fileConfig
@@ -19,6 +20,14 @@ config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+# Override sqlalchemy.url from DATABASE_URL env variable if set
+db_url = os.getenv("DATABASE_URL")
+if db_url:
+    # Render/Heroku use postgres:// but SQLAlchemy needs postgresql://
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    config.set_main_option("sqlalchemy.url", db_url)
 
 target_metadata = Base.metadata
 

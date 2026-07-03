@@ -7,8 +7,10 @@ services:
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        value: sqlite:///./tennis.db
+        value: sqlite:////app/tennis.db
       - key: ALLOWED_ORIGINS
         value: "*"
       - key: SECRET_KEY
         generateValue: true
+      - key: APP_URL
+        value: https://tt-tracker-api.onrender.com

@@ -1,6 +1,7 @@
 """ELO rating calculation and persistence."""
 from sqlalchemy.orm import Session
 
+from web.models.elo_history import EloHistory
 from web.models.session import GameSession
 from web.models.user import User
 
@@ -60,6 +61,10 @@ def update_elo_after_match(db: Session, sess: GameSession) -> None:
         winner.elo_matches, loser.elo_matches,
     )
 
+    # Capture avant mutation pour l'historique
+    winner_elo_before = winner.elo_rating
+    loser_elo_before  = loser.elo_rating
+
     winner.elo_rating += delta_w
     winner.elo_wins += 1
     winner.elo_matches += 1
@@ -69,4 +74,41 @@ def update_elo_after_match(db: Session, sess: GameSession) -> None:
     loser.elo_matches += 1
     loser.elo_last_change = delta_l
 
+    db.add(EloHistory(user_id=winner_id, session_id=sess.id,
+                      elo_before=winner_elo_before, elo_after=winner.elo_rating,
+                      delta=round(delta_w, 2)))
+    db.add(EloHistory(user_id=loser_id, session_id=sess.id,
+                      elo_before=loser_elo_before, elo_after=loser.elo_rating,
+                      delta=round(delta_l, 2)))
+
     db.commit()
+
+    # Notification push — dépassement de classement
+    _notify_elo_overtake(db, loser, loser_elo_before)
+
+
+def _notify_elo_overtake(db: Session, loser: User, elo_before: float) -> None:
+    """Notifie le loser si des joueurs l'ont dépassé suite à ce match."""
+    try:
+        from web.services.push_service import notify_user
+        # Joueurs qui étaient en dessous avant mais sont maintenant au-dessus
+        overtakers = (
+            db.query(User)
+            .filter(
+                User.elo_rating > loser.elo_rating,
+                User.elo_rating <= elo_before,
+                User.is_active == True,
+                User.id != loser.id,
+            )
+            .count()
+        )
+        if overtakers > 0:
+            notify_user(
+                db, loser.id,
+                "Tu as été dépassé au classement !",
+                f"{overtakers} joueur(s) te dépassent maintenant. "
+                "Joue un match pour remonter !",
+                url="/leaderboard",
+            )
+    except Exception:
+        pass  # push non configuré — pas bloquant

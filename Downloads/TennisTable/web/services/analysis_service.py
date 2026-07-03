@@ -150,6 +150,65 @@ def get_evolution(db: Session, player_id: int, limit: int = 15) -> List[Dict]:
     return result
 
 
+def get_session_coaching_tips(db: Session, session_id: int, player_id: int) -> List[str]:
+    """Generate 2-3 actionable tips for a specific just-completed session."""
+    summary = (
+        db.query(SessionSummary)
+        .filter(SessionSummary.session_id == session_id,
+                SessionSummary.player_id == player_id)
+        .first()
+    )
+    if not summary or summary.total_strokes < 5:
+        return []
+
+    total = summary.total_strokes or 1
+    spm   = summary.strokes_per_min or 0
+    fh_drive_pct  = summary.fh_drive / total
+    fh_loop_pct   = summary.fh_loop  / total
+    fh_smash_pct  = summary.fh_smash / total
+    bh_pct        = (summary.bh_drive + summary.bh_smash) / total
+
+    tips = []
+
+    if fh_drive_pct > 0.60:
+        tips.append(
+            f"FH Drive dominant ({round(fh_drive_pct*100)}% des coups) — "
+            "variez avec du FH Loop pour devenir imprévisible."
+        )
+    if bh_pct < 0.12:
+        tips.append(
+            f"Revers quasi absent ({round(bh_pct*100)}%) — "
+            "intégrez-le pour couvrir tout le terrain."
+        )
+    if fh_smash_pct > 0.40:
+        tips.append(
+            f"Beaucoup de smash ({round(fh_smash_pct*100)}%) — "
+            "construisez plus l'échange avant de finir le point."
+        )
+    if fh_loop_pct < 0.08 and total > 15:
+        tips.append(
+            "FH Loop quasi absent — incorporez des topspins pour créer de la rotation."
+        )
+    if spm < 20 and total > 10:
+        tips.append(
+            f"Rythme lent ({round(spm)} coups/min) — "
+            "accélérez la cadence pour mieux simuler un vrai match."
+        )
+    if spm > 70:
+        tips.append(
+            f"Rythme très élevé ({round(spm)} coups/min) — "
+            "pensez à varier vitesse et placement plutôt que la seule rapidité."
+        )
+    # Fallback : toujours au moins un tip sur le coup dominant
+    if not tips and summary.dominant_shot and summary.dominant_shot != "—":
+        tips.append(
+            f"Coup dominant : {summary.dominant_shot} — "
+            "continuez à le renforcer tout en développant vos autres coups."
+        )
+
+    return tips[:3]
+
+
 def get_recommendations(db: Session, player_id: int) -> List[str]:
     profile = get_profile(db, player_id)
     totals = profile.get("totals", {})
@@ -276,6 +335,72 @@ def generate_csv_evolution(db: Session, player_id: int) -> str:
     for row in evolution:
         writer.writerow(row)
     return output.getvalue()
+
+
+def get_player_profile_full(db: Session, player_id: int) -> Dict[str, Any]:
+    """Full public profile: stats, stroke distribution, recent matches."""
+    from web.models.session import GameSession
+    from web.models.user import User
+
+    summaries = (
+        db.query(SessionSummary)
+        .filter(SessionSummary.player_id == player_id)
+        .all()
+    )
+
+    total_sessions = len(summaries)
+
+    totals = {k: 0 for k in ["bh_drive", "bh_smash", "fh_drive", "fh_loop", "fh_smash", "total"]}
+    for s in summaries:
+        totals["bh_drive"] += s.bh_drive
+        totals["bh_smash"] += s.bh_smash
+        totals["fh_drive"] += s.fh_drive
+        totals["fh_loop"]  += s.fh_loop
+        totals["fh_smash"] += s.fh_smash
+        totals["total"]    += s.total_strokes
+
+    stroke_distribution = {
+        "FH Drive": totals["fh_drive"],
+        "FH Loop":  totals["fh_loop"],
+        "FH Smash": totals["fh_smash"],
+        "BH Drive": totals["bh_drive"],
+        "BH Smash": totals["bh_smash"],
+    }
+
+    dominant_stroke = compute_dominant(totals) if totals["total"] > 0 else "—"
+
+    # Recent matches (sessions with mode="match")
+    recent_sessions = (
+        db.query(GameSession)
+        .filter(
+            GameSession.player1_id == player_id,
+            GameSession.mode == "match",
+            GameSession.status == "completed",
+        )
+        .order_by(GameSession.started_at.desc())
+        .limit(10)
+        .all()
+    )
+
+    recent_matches = []
+    for sess in recent_sessions:
+        opponent = None
+        if sess.player2_id:
+            opp_user = db.query(User).filter(User.id == sess.player2_id).first()
+            opponent = opp_user.display_name or opp_user.username if opp_user else None
+        won = sess.winner_id == player_id if sess.winner_id else None
+        recent_matches.append({
+            "date": sess.started_at.strftime("%d/%m/%Y") if sess.started_at else "—",
+            "opponent": opponent or "Entraînement libre",
+            "won": won,
+        })
+
+    return {
+        "total_sessions": total_sessions,
+        "dominant_stroke": dominant_stroke,
+        "stroke_distribution": stroke_distribution,
+        "recent_matches": recent_matches,
+    }
 
 
 def get_training_vs_match(db: Session, player_id: int) -> Dict:

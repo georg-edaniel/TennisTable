@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Conditions Générales d'Utilisation — TT Tracker{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;margin:0 auto;padding:2rem 1rem">
+  <h1 style="font-size:2rem;font-weight:900;margin-bottom:0.5rem">Conditions Générales d'Utilisation</h1>
+  <p style="color:var(--text-muted);margin-bottom:2rem">Dernière mise à jour : 28 mars 2026</p>
+
+  <div class="card" style="padding:2rem;display:flex;flex-direction:column;gap:1.5rem">
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">1. Présentation du service</h2>
+      <p>TT Tracker (ci-après « le Service ») est une application web permettant l'analyse de sessions de ping-pong via des raquettes connectées Bluetooth (BLE). Le Service est opéré par TT Tracker (ci-après « nous »).</p>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">2. Acceptation des CGU</h2>
+      <p>En créant un compte ou en utilisant le Service, vous acceptez les présentes CGU dans leur intégralité. Si vous n'acceptez pas ces conditions, vous ne devez pas utiliser le Service.</p>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">3. Compte utilisateur</h2>
+      <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.4rem">
+        <li>Vous êtes responsable de la confidentialité de vos identifiants de connexion.</li>
+        <li>Vous devez fournir des informations exactes lors de l'inscription.</li>
+        <li>Un seul compte par personne physique est autorisé.</li>
+        <li>Vous devez avoir au moins 13 ans pour créer un compte.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">4. Utilisation autorisée</h2>
+      <p>Le Service est destiné exclusivement à un usage personnel et non commercial. Il est interdit de :</p>
+      <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.4rem;margin-top:0.5rem">
+        <li>Tenter d'accéder aux données d'autres utilisateurs sans autorisation.</li>
+        <li>Utiliser le Service pour toute activité illégale.</li>
+        <li>Automatiser l'accès au Service (scraping, bots) sans autorisation écrite préalable.</li>
+        <li>Revendre, sous-licencier ou distribuer le Service.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">5. Abonnements et paiements</h2>
+      <p>Les abonnements Club sont facturés mensuellement via Stripe. En souscrivant :</p>
+      <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.4rem;margin-top:0.5rem">
+        <li>Vous autorisez les prélèvements automatiques mensuels.</li>
+        <li>Les tarifs peuvent évoluer avec un préavis de 30 jours.</li>
+        <li>Vous pouvez annuler à tout moment ; l'accès reste actif jusqu'à la fin de la période payée.</li>
+        <li>Aucun remboursement partiel de période en cours.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">6. Propriété intellectuelle</h2>
+      <p>Le Service, son design, son code source et ses contenus sont la propriété exclusive de TT Tracker. Vos données de jeu restent votre propriété ; vous nous accordez une licence d'utilisation pour fournir le Service.</p>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">7. Limitation de responsabilité</h2>
+      <p>Le Service est fourni « tel quel », sans garantie de disponibilité continue. Nous ne sommes pas responsables des pertes de données, interruptions de service ou dommages indirects résultant de l'utilisation du Service.</p>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">8. Résiliation</h2>
+      <p>Nous nous réservons le droit de suspendre ou supprimer tout compte en violation des présentes CGU, sans préavis. Vous pouvez demander la suppression de votre compte en contactant le support.</p>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">9. Droit applicable</h2>
+      <p>Les présentes CGU sont régies par le droit français. Tout litige sera soumis à la juridiction compétente.</p>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">10. Contact</h2>
+      <p>Pour toute question, contactez-nous à : <strong>support@tttracker.com</strong></p>
+    </section>
+
+  </div>
+
+  <div style="margin-top:1.5rem;display:flex;gap:1rem">
+    <a href="/" class="btn btn-ghost">← Accueil</a>
+    <a href="/legal/privacy" class="btn btn-ghost">Politique de confidentialité</a>
+  </div>
+</div>
+{% endblock %}

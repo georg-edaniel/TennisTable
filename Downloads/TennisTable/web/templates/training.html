@@ -11,10 +11,13 @@
   sessionId: {{ active_session.id if active_session else 'null' }},
   racket1Id: {{ active_session.racket1_id if active_session else 'null' }},
   loading: false,
+  slots: [''],
+  addSlot() { this.slots.push(''); },
+  removeSlot(i) { if (this.slots.length > 1) this.slots.splice(i, 1); },
 
   async startSession(racketIds) {
     const ids = racketIds.filter(r => r).map(r => parseInt(r));
-    if (!ids.length) { $store.tennis.notify('{{ t('training.rackets') }} !', 'error'); return; }
+    // ids can be empty — server will auto-use __manual__ racket (BLE can be connected later)
     this.loading = true;
     try {
       const data = await $store.tennis.apiPost('/sessions/start', {
@@ -55,7 +58,7 @@
 <!-- ── Si pas de session : formulaire démarrage ── -->
 <div x-show="!sessionId" class="card animate-in" style="max-width:480px;margin-bottom:1.25rem">
   <div style="font-weight:700;font-size:1.1rem;margin-bottom:1rem">{{ t('training.start_title') }}</div>
-  <div x-data="{slots: [''], addSlot() { this.slots.push(''); }, removeSlot(i) { if(this.slots.length>1) this.slots.splice(i,1); }}">
+  <div>
     <label class="label">{{ t('training.rackets') }}</label>
     <template x-for="(v, i) in slots" :key="i">
       <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center">
@@ -76,9 +79,9 @@
       {{ t('training.add_racket') }}
     </button>
     <button class="btn btn-success btn-lg" style="width:100%;justify-content:center"
-      @click="$root.startSession(slots)" :disabled="!slots[0] || $root.loading">
+      @click="startSession(slots)" :disabled="loading">
       <i data-lucide="play" style="width:18px;height:18px"></i>
-      <span x-text="$root.loading ? '{{ t('common.starting') }}' : '{{ t('common.start') }}'"></span>
+      <span x-text="loading ? '{{ t('common.starting') }}' : '{{ t('common.start') }}'"></span>
     </button>
   </div>
 </div>

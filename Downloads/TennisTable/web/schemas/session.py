@@ -1,18 +1,59 @@
 from datetime import datetime
-from pydantic import BaseModel
-from typing import Optional, List
+from typing import Any, Literal, Optional, List
+from pydantic import BaseModel, field_validator
 
 
 class SessionStart(BaseModel):
-    mode: str = "training"  # training | match
+    mode: Literal["training", "match"] = "training"
     player2_id: Optional[int] = None
-    racket1_id: int
+    racket1_id: Optional[int] = None
     racket2_id: Optional[int] = None
+    racket_ids: List[int] = []
+    best_of: Literal[3, 5, 7] = 3
+    first_server: Literal[1, 2] = 1
 
 
 class ScoreAction(BaseModel):
-    player: int  # 1 or 2
-    action: str  # point | undo | new_set
+    player: int
+    action: Literal["point", "undo", "new_set"]
+
+    @field_validator("player")
+    @classmethod
+    def player_valid(cls, v: int) -> int:
+        if v not in (1, 2):
+            raise ValueError("player doit être 1 ou 2")
+        return v
+
+
+class ManualMatchIn(BaseModel):
+    player2_id: Optional[int] = None
+    opponent_name: Optional[str] = None
+    p1_sets: int = 0
+    p2_sets: int = 0
+    sets_detail: Optional[List[Any]] = None
+    notes: Optional[str] = None
+    played_at: Optional[datetime] = None
+
+    @field_validator("opponent_name")
+    @classmethod
+    def opponent_name_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v) > 128:
+            raise ValueError("Nom adversaire : 128 caractères max")
+        return v
+
+    @field_validator("notes")
+    @classmethod
+    def notes_valid(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and len(v) > 1000:
+            raise ValueError("Notes : 1000 caractères max")
+        return v
+
+    @field_validator("p1_sets", "p2_sets")
+    @classmethod
+    def sets_valid(cls, v: int) -> int:
+        if v < 0 or v > 20:
+            raise ValueError("Nombre de sets invalide")
+        return v
 
 
 class SessionOut(BaseModel):
@@ -23,6 +64,7 @@ class SessionOut(BaseModel):
     player2_id: Optional[int] = None
     racket1_id: int
     racket2_id: Optional[int] = None
+    racket_ids: str = "[]"
     started_at: datetime
     ended_at: Optional[datetime] = None
     duration_s: Optional[int] = None
@@ -32,6 +74,13 @@ class SessionOut(BaseModel):
     p1_score: int
     p2_score: int
     winner_id: Optional[int] = None
+    # ITTF rules
+    best_of: int = 3
+    server_id: Optional[int] = None
+    deuce_active: bool = False
+    final_set_alert: bool = False   # computed, not stored
+    sets_to_win: int = 2            # computed = ceil(best_of/2)
+    llm_coach_tip: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

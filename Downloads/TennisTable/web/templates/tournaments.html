@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Tournois — TT Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+    <div>
+      <h1 class="page-title">Tournois 🏆</h1>
+      <p class="page-subtitle">Brackets élimination directe</p>
+    </div>
+    {% if user.role == 'admin' %}
+    <button class="btn btn-primary" @click="$store.tennis.showCreateTournament=true">
+      <i data-lucide="plus" style="width:16px;height:16px"></i>
+      Créer un tournoi
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Stats ── -->
+<div class="grid-3 animate-in" style="margin-bottom:1.25rem">
+  <div class="stat-card">
+    <div class="stat-label">Total</div>
+    <div class="stat-value">{{ total }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">En cours</div>
+    <div class="stat-value" style="color:var(--accent-green)">{{ active_count }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Complétés</div>
+    <div class="stat-value" style="color:var(--text-muted)">{{ completed_count }}</div>
+  </div>
+</div>
+
+<!-- ── Liste tournois ── -->
+<div class="card animate-in">
+  <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+    <i data-lucide="trophy" style="width:16px;height:16px;color:var(--accent-orange)"></i>
+    Liste des tournois
+  </div>
+
+  {% if tournaments %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th>Statut</th>
+          <th>Créé par</th>
+          <th>Max joueurs</th>
+          <th>Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tournaments %}
+        <tr>
+          <td style="font-weight:600">
+            <a href="/tournaments/{{ t.id }}" style="color:var(--accent-blue);text-decoration:none">{{ t.name }}</a>
+          </td>
+          <td>
+            {% if t.status == 'active' %}
+              <span class="badge badge-green">En cours</span>
+            {% elif t.status == 'completed' %}
+              <span class="badge badge-gray">Terminé</span>
+            {% else %}
+              <span class="badge badge-orange">En attente</span>
+            {% endif %}
+          </td>
+          <td>
+            {% set creator = creators.get(t.created_by) %}
+            {{ creator.display_name or creator.username if creator else '—' }}
+          </td>
+          <td>{{ t.max_players }}</td>
+          <td style="color:var(--text-muted);font-size:0.85rem">
+            {{ t.created_at.strftime('%d/%m/%Y') if t.created_at else '—' }}
+          </td>
+          <td>
+            <a href="/tournaments/{{ t.id }}" class="btn btn-ghost btn-sm">Voir</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <span style="font-size:2.5rem">🏆</span>
+    <span>Aucun tournoi pour le moment</span>
+    {% if user.role == 'admin' %}
+    <button class="btn btn-primary" style="margin-top:0.5rem" @click="$store.tennis.showCreateTournament=true">
+      Créer le premier tournoi
+    </button>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- ── Modal créer tournoi (admin) ── -->
+{% if user.role == 'admin' %}
+<div x-data x-show="$store.tennis.showCreateTournament"
+     style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:50;display:flex;align-items:center;justify-content:center"
+     x-cloak @keydown.escape.window="$store.tennis.showCreateTournament=false">
+  <div class="card" style="width:100%;max-width:420px;animation:slideIn .2s ease" @click.stop>
+    <div style="font-weight:700;font-size:1.1rem;margin-bottom:1rem">Créer un tournoi</div>
+    <form id="create-tournament-form" @submit.prevent="
+      const fd = new FormData($el);
+      fetch('/api/tournaments', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer {{ access_token }}'},
+        body: JSON.stringify({name: fd.get('name'), max_players: parseInt(fd.get('max_players'))})
+      }).then(r=>r.json()).then(d=>{
+        if(d.id){ location.href='/tournaments/'+d.id; }
+        else { $store.tennis.notify('Erreur: '+(d.detail||'inconnue'), 'error'); }
+      });
+    ">
+      <div style="margin-bottom:1rem">
+        <label style="font-size:0.85rem;color:var(--text-muted);display:block;margin-bottom:4px">Nom du tournoi</label>
+        <input name="name" class="input" style="width:100%" placeholder="Ex: Open de Printemps 2026" required>
+      </div>
+      <div style="margin-bottom:1.25rem">
+        <label style="font-size:0.85rem;color:var(--text-muted);display:block;margin-bottom:4px">Max joueurs</label>
+        <select name="max_players" class="input" style="width:100%">
+          <option value="4">4</option>
+          <option value="8" selected>8</option>
+          <option value="16">16</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+        <button type="button" class="btn btn-ghost" @click="$store.tennis.showCreateTournament=false">Annuler</button>
+        <button type="submit" class="btn btn-primary">Créer</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) lucide.createIcons();
+  if (!Alpine.store('tennis').hasOwnProperty('showCreateTournament')) {
+    Alpine.store('tennis').showCreateTournament = false;
+  }
+});
+</script>
+{% endblock %}

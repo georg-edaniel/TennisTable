@@ -1,5 +1,5 @@
-from datetime import datetime
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, func
+from datetime import date, datetime
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 from web.core.database import Base
 
@@ -22,3 +22,12 @@ class User(Base):
     elo_matches: Mapped[int] = mapped_column(Integer, default=0)
     elo_wins: Mapped[int] = mapped_column(Integer, default=0)
     elo_last_change: Mapped[float] = mapped_column(Float, default=0.0)
+    subscription_tier: Mapped[str] = mapped_column(String, default="free")  # free | club
+    coach_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=True, index=True
+    )
+    current_streak: Mapped[int] = mapped_column(Integer, default=0)
+    max_streak: Mapped[int] = mapped_column(Integer, default=0)
+    last_activity_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

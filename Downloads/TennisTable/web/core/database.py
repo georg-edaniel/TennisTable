@@ -4,10 +4,12 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from contextlib import contextmanager
 from .config import settings
 
-# SQLite — connect_args needed for multi-thread use
+_db_url = settings.web.db_url
+_is_postgres = "postgresql" in _db_url
+
 engine = create_engine(
-    settings.web.db_url,
-    connect_args={"check_same_thread": False},
+    _db_url,
+    connect_args={} if _is_postgres else {"check_same_thread": False},
     echo=False,
 )
 

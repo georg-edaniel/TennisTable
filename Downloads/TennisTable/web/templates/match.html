@@ -25,10 +25,13 @@
   showFinalSetAlert: false,
   showRallyOverlay: false,
   rallyTimerHandle: null,
+  slots: ['', ''],
+  addSlot() { this.slots.push(''); },
+  removeSlot(i) { if (this.slots.length > 1) this.slots.splice(i, 1); },
 
   async startSession(slots) {
     const ids = slots.filter(r => r).map(r => parseInt(r));
-    if (!ids.length) { $store.tennis.notify('Choisissez au moins une raquette.', 'error'); return; }
+    // ids can be empty — server will auto-use __manual__ racket (BLE can be connected later)
     this.loading = true;
     try {
       const data = await $store.tennis.apiPost('/sessions/start', {
@@ -88,7 +91,7 @@
     this.showRallyOverlay = false;
     this.rallyTimerHandle = setTimeout(() => {
       if (this.sessionId) this.showRallyOverlay = true;
-    }, 8000);
+    }, 20000);
   },
 
   async stopMatch() {
@@ -118,7 +121,7 @@
 <!-- Démarrage -->
 <div x-show="!sessionId" class="card animate-in" style="max-width:520px;margin-bottom:1.25rem">
   <div style="font-weight:700;font-size:1.1rem;margin-bottom:1rem">{{ t('match.setup_title') }}</div>
-  <div x-data="{slots: ['', ''], addSlot() { this.slots.push(''); }, removeSlot(i) { if(this.slots.length>1) this.slots.splice(i,1); }}">
+  <div>
     <label class="label">{{ t('match.rackets_label') }}</label>
     <template x-for="(v, i) in slots" :key="i">
       <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;align-items:center">
@@ -143,7 +146,7 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
       <div>
         <label class="label">{{ t('match.format') }}</label>
-        <select class="input" x-model="$root.matchFormat">
+        <select class="input" x-model="matchFormat">
           <option value="3">{{ t('match.bo3') }}</option>
           <option value="5">{{ t('match.bo5') }}</option>
           <option value="7">{{ t('match.bo7') }}</option>
@@ -151,16 +154,16 @@
       </div>
       <div>
         <label class="label">{{ t('match.first_server') }}</label>
-        <select class="input" x-model="$root.firstServer">
+        <select class="input" x-model="firstServer">
           <option value="1">{{ t('match.player1') }}</option>
           <option value="2">{{ t('match.player2') }}</option>
         </select>
       </div>
     </div>
     <button class="btn btn-success btn-lg" style="width:100%;justify-content:center"
-      @click="$root.startSession(slots)" :disabled="$root.loading">
+      @click="startSession(slots)" :disabled="loading">
       <i data-lucide="play" style="width:18px;height:18px"></i>
-      <span x-text="$root.loading ? '{{ t('common.starting') }}' : '{{ t('match.start_btn') }}'"></span>
+      <span x-text="loading ? '{{ t('common.starting') }}' : '{{ t('match.start_btn') }}'"></span>
     </button>
     <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem">
       {{ t('match.player_note') }}

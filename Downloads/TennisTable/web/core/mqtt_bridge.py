@@ -10,6 +10,7 @@ import threading
 from typing import Callable
 
 import paho.mqtt.client as mqtt
+from paho.mqtt.enums import CallbackAPIVersion
 
 from .config import MqttConfig
 
@@ -21,7 +22,7 @@ class MqttBridge:
         self._cfg = cfg
         self._loop = loop
         self._queue: asyncio.Queue = asyncio.Queue()
-        self._client = mqtt.Client(client_id=cfg.client_id + "_web")
+        self._client = mqtt.Client(CallbackAPIVersion.VERSION1, client_id=cfg.client_id + "_web")
         self._client.on_connect = self._on_connect
         self._client.on_message = self._on_message
         self._client.on_disconnect = self._on_disconnect

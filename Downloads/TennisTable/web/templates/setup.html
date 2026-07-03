@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Connecter ma raquette — TT Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <h1 class="page-title">Connecter ma raquette</h1>
+  <p class="page-subtitle">Guide complet — de l'allumage à la première frappe enregistrée</p>
+</div>
+
+<!-- ── Prérequis ── -->
+<div class="card animate-in" style="margin-bottom:1.25rem" x-data>
+  <div style="font-weight:700;margin-bottom:0.75rem;display:flex;align-items:center;gap:8px">
+    <i data-lucide="check-circle" style="width:16px;height:16px;color:var(--accent-green)"></i>
+    Prérequis
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem">
+    <div style="padding:0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem">
+      <div style="font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+        <span>🌐</span> Navigateur compatible
+      </div>
+      <div style="color:var(--text-muted)">
+        <span style="color:var(--accent-green);font-weight:600">✓ Chrome</span> ·
+        <span style="color:var(--accent-green);font-weight:600">✓ Edge</span> ·
+        <span style="color:var(--accent-red);font-weight:600">✗ Safari</span> ·
+        <span style="color:var(--accent-red);font-weight:600">✗ Firefox</span><br>
+        <span style="font-size:0.78rem">PC ou Android uniquement (iOS non supporté)</span>
+      </div>
+    </div>
+    <div style="padding:0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem">
+      <div style="font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+        <span>⚡</span> Raquette chargée
+      </div>
+      <div style="color:var(--text-muted)">Batterie ≥ 20% recommandée avant la session. Chargez via USB-C.</div>
+    </div>
+    <div style="padding:0.75rem;border:1px solid var(--border);border-radius:8px;font-size:0.85rem">
+      <div style="font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+        <span>🔌</span> Firmware flashé
+      </div>
+      <div style="color:var(--text-muted)">Le firmware <code style="font-size:0.8em;background:rgba(255,255,255,0.07);padding:1px 4px;border-radius:3px">TableTennisBat_EI.ino</code> doit être uploadé sur l'Arduino.</div>
+    </div>
+  </div>
+
+  <!-- Statut BLE live -->
+  <div style="margin-top:0.75rem;padding:0.75rem;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15);border-radius:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
+    <div style="display:flex;align-items:center;gap:8px;font-size:0.875rem">
+      <span class="dot" :class="$store.tennis.webBleConnected ? 'dot-green animate-pulse' : 'dot-gray'"
+            style="width:10px;height:10px;min-width:10px;border-radius:50%"></span>
+      <span x-text="$store.tennis.webBleConnected
+        ? '✅ Raquette connectée : ' + ($store.tennis.webBleDevice || 'TableTennisBat')
+        : 'Aucune raquette connectée'"></span>
+    </div>
+    <template x-if="!$store.tennis.webBleConnected">
+      <button @click="$store.tennis.connectBLE()" class="btn btn-primary btn-sm">
+        <i data-lucide="bluetooth" style="width:14px;height:14px"></i>
+        Connecter maintenant
+      </button>
+    </template>
+    <template x-if="$store.tennis.webBleConnected">
+      <button @click="$store.tennis.disconnectBLE()" class="btn btn-ghost btn-sm">
+        Déconnecter
+      </button>
+    </template>
+  </div>
+</div>
+
+<!-- ── Guide étape par étape ── -->
+<div class="card animate-in" style="margin-bottom:1.25rem">
+  <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+    <i data-lucide="list-checks" style="width:16px;height:16px;color:var(--accent-blue)"></i>
+    Guide en 5 étapes
+  </div>
+  <div style="display:flex;flex-direction:column;gap:0.65rem">
+
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:10px">
+      <div style="min-width:30px;height:30px;background:#10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:800;color:#fff;flex-shrink:0">1</div>
+      <div>
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:3px">Chargez votre raquette</div>
+        <div style="color:var(--text-muted);font-size:0.82rem">Branchez-la via USB-C au moins 30 min avant la première utilisation. La LED orange clignote pendant la charge, s'éteint quand c'est plein.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem;background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.2);border-radius:10px">
+      <div style="min-width:30px;height:30px;background:#6366f1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:800;color:#fff;flex-shrink:0">2</div>
+      <div>
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:3px">Allumez la raquette</div>
+        <div style="color:var(--text-muted);font-size:0.82rem">Appuyez <strong>2 secondes</strong> sur le bouton latéral. La <span style="color:#6366f1;font-weight:600">LED bleue clignote</span> → raquette en mode BLE, prête à connecter.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);border-radius:10px">
+      <div style="min-width:30px;height:30px;background:#f59e0b;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:800;color:#fff;flex-shrink:0">3</div>
+      <div>
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:3px">Ouvrez TT Tracker dans Chrome ou Edge</div>
+        <div style="color:var(--text-muted);font-size:0.82rem">Assurez-vous d'utiliser <strong>Chrome</strong> ou <strong>Edge</strong> sur PC ou Android. Safari et Firefox ne supportent pas Web Bluetooth.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem;background:rgba(139,92,246,0.07);border:1px solid rgba(139,92,246,0.2);border-radius:10px">
+      <div style="min-width:30px;height:30px;background:#8b5cf6;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:800;color:#fff;flex-shrink:0">4</div>
+      <div>
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:3px">Cliquez "Connecter ma raquette"</div>
+        <div style="color:var(--text-muted);font-size:0.82rem">Le bouton est disponible dans la <strong>sidebar</strong> (en bas à gauche) et dans la <strong>card Actions rapides</strong> du Dashboard. Chrome ouvre une fenêtre de sélection BLE.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:10px">
+      <div style="min-width:30px;height:30px;background:#10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:800;color:#fff;flex-shrink:0">5</div>
+      <div>
+        <div style="font-weight:700;font-size:0.9rem;margin-bottom:3px">Sélectionnez votre raquette dans le popup</div>
+        <div style="color:var(--text-muted);font-size:0.82rem">Cherchez <code style="font-size:0.8em;background:rgba(255,255,255,0.07);padding:1px 4px;border-radius:3px">TableTennisBat1</code> dans la liste et cliquez <strong>Jumeler</strong>. La <span style="color:#10b981;font-weight:600">LED verte</span> s'allume → vous êtes connecté. Démarrez une session !</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Raquettes enregistrées ── -->
+{% if rackets %}
+<div class="card animate-in" style="margin-bottom:1.25rem">
+  <div style="font-weight:700;margin-bottom:0.75rem;display:flex;align-items:center;gap:8px">
+    <i data-lucide="radio" style="width:16px;height:16px;color:var(--accent-purple)"></i>
+    Raquettes enregistrées
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem">
+    {% for r in rackets %}
+    <div style="padding:0.85rem;border:1px solid var(--border);border-radius:10px;text-align:center">
+      <div style="font-size:1.75rem;margin-bottom:0.4rem">🏓</div>
+      <div style="font-weight:700;font-size:0.85rem">{{ r.label or r.ble_device_name }}</div>
+      <div style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;font-family:monospace">{{ r.ble_device_name }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Dépannage ── -->
+<div class="card animate-in" style="margin-bottom:1.25rem" x-data="{open: null}">
+  <div style="font-weight:700;margin-bottom:0.75rem;display:flex;align-items:center;gap:8px">
+    <i data-lucide="help-circle" style="width:16px;height:16px;color:var(--accent-orange)"></i>
+    Dépannage
+  </div>
+  <div style="display:flex;flex-direction:column;gap:0.5rem">
+
+    {% set items = [
+      ("La raquette n'apparaît pas dans le popup", "Vérifiez que la LED bleue clignote (raquette allumée). Si non, rechargez et rallumez. Assurez-vous que le Bluetooth de votre PC/téléphone est activé."),
+      ("La connexion se coupe souvent", "Rapprochez-vous de votre PC. Évitez les environnements avec beaucoup d'appareils BLE (salles de sport, open spaces). Rechargez la raquette."),
+      ("iOS / Safari — bouton grisé", "Web Bluetooth n'est pas supporté sur iOS (iPhone/iPad) ni Safari. Utilisez Chrome ou Edge sur un PC ou un téléphone Android."),
+      ("Les coups ne s'enregistrent pas", "Vous devez démarrer une session (Entraînement ou Match) avant de frapper. La raquette BLE envoie les données seulement quand une session est active."),
+      ("Firefox ne montre pas de popup BLE", "Firefox ne supporte pas l'API Web Bluetooth. Passez sur Chrome ou Edge."),
+    ] %}
+    {% for question, answer in items %}
+    <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      <button @click="open = (open === {{ loop.index }}) ? null : {{ loop.index }}"
+              style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:0.75rem;background:none;border:none;cursor:pointer;color:inherit;text-align:left">
+        <span style="font-weight:600;font-size:0.875rem">{{ question }}</span>
+        <i data-lucide="chevron-down"
+           :style="open === {{ loop.index }} ? 'transform:rotate(180deg)' : ''"
+           style="width:15px;height:15px;color:var(--text-muted);flex-shrink:0;transition:transform 0.2s"></i>
+      </button>
+      <div x-show="open === {{ loop.index }}" x-transition
+           style="padding:0 0.75rem 0.75rem;font-size:0.82rem;color:var(--text-muted);line-height:1.6">
+        {{ answer }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ── CTA ── -->
+<div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1.25rem" x-data>
+  <button @click="$store.tennis.connectBLE()" class="btn btn-primary btn-lg"
+          x-show="!$store.tennis.webBleConnected">
+    <i data-lucide="bluetooth" style="width:18px;height:18px"></i>
+    Connecter ma raquette
+  </button>
+  <a href="/training" class="btn btn-primary btn-lg"
+     x-show="$store.tennis.webBleConnected">
+    <i data-lucide="zap" style="width:18px;height:18px"></i>
+    Démarrer une session
+  </a>
+  <a href="/dashboard" class="btn btn-ghost btn-lg">
+    <i data-lucide="layout-dashboard" style="width:18px;height:18px"></i>
+    Retour au Dashboard
+  </a>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)lucide.createIcons()});</script>
+{% endblock %}

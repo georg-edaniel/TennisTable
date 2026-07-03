@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Clubs — TT Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+    <div>
+      <h1 class="page-title">Clubs 🏟️</h1>
+      <p class="page-subtitle">Rejoignez ou créez un club pour jouer entre membres</p>
+    </div>
+    <div style="display:flex;gap:0.75rem">
+      <button class="btn btn-ghost" onclick="showJoin()">
+        <i data-lucide="log-in" style="width:16px;height:16px"></i> Rejoindre
+      </button>
+      <button class="btn btn-primary" onclick="showCreate()">
+        <i data-lucide="plus" style="width:16px;height:16px"></i> Créer un club
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Mes clubs -->
+{% if my_clubs %}
+<div class="card animate-in" style="margin-bottom:1.25rem">
+  <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+    <i data-lucide="star" style="width:16px;height:16px;color:var(--accent-orange)"></i>
+    Mes clubs ({{ my_clubs|length }})
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem">
+    {% for c in my_clubs %}
+    <a href="/clubs/{{ c.id }}" style="text-decoration:none">
+      <div style="padding:1rem;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:10px;transition:border-color .2s"
+           onmouseover="this.style.borderColor='rgba(99,102,241,0.5)'" onmouseout="this.style.borderColor='rgba(99,102,241,0.2)'">
+        <div style="font-weight:700;color:var(--text-primary);margin-bottom:4px">{{ c.name }}</div>
+        <div style="font-size:0.8rem;color:var(--text-muted)">{{ c.description or 'Pas de description' }}</div>
+        <div style="margin-top:8px;font-size:0.75rem;color:var(--accent-blue)">
+          {% if c.owner_id == user.id %}Propriétaire{% else %}Membre{% endif %}
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Tous les clubs -->
+<div class="card animate-in">
+  <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+    <i data-lucide="list" style="width:16px;height:16px;color:var(--accent-blue)"></i>
+    Tous les clubs ({{ all_clubs|length }})
+  </div>
+  {% if all_clubs %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Nom</th><th>Description</th><th>Créé le</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for c in all_clubs %}
+        <tr>
+          <td style="font-weight:600">
+            <a href="/clubs/{{ c.id }}" style="color:var(--accent-blue);text-decoration:none">{{ c.name }}</a>
+          </td>
+          <td style="color:var(--text-muted);font-size:0.82rem">{{ c.description or '—' }}</td>
+          <td style="color:var(--text-muted);font-size:0.8rem">{{ c.created_at.strftime('%d/%m/%Y') }}</td>
+          <td>
+            {% if c.id not in my_club_ids %}
+            <a href="/clubs/{{ c.id }}" class="btn btn-ghost btn-sm">Voir</a>
+            {% else %}
+            <span class="badge badge-blue">Membre</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state" style="padding:2rem 0">
+    <span style="font-size:2rem">🏟️</span>
+    <span>Aucun club encore — créez le premier !</span>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Create modal -->
+<div id="modal-create" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.6);align-items:center;justify-content:center">
+  <div class="card" style="width:min(400px,90vw)" onclick="event.stopPropagation()">
+    <div style="font-weight:700;font-size:1.1rem;margin-bottom:1.25rem">Créer un club</div>
+    <div style="margin-bottom:1rem">
+      <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px">Nom *</label>
+      <input id="c-name" type="text" maxlength="128" style="width:100%;background:var(--bg-input,#1e1e2e);color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;font-size:0.9rem">
+    </div>
+    <div style="margin-bottom:1.25rem">
+      <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px">Description</label>
+      <textarea id="c-desc" maxlength="512" rows="2" style="width:100%;background:var(--bg-input,#1e1e2e);color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;font-size:0.9rem;resize:none"></textarea>
+    </div>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="hideModals()">Annuler</button>
+      <button class="btn btn-primary" onclick="createClub()">Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Join modal -->
+<div id="modal-join" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.6);align-items:center;justify-content:center">
+  <div class="card" style="width:min(360px,90vw)" onclick="event.stopPropagation()">
+    <div style="font-weight:700;font-size:1.1rem;margin-bottom:1.25rem">Rejoindre un club</div>
+    <div style="margin-bottom:1.25rem">
+      <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px">Code d'invitation</label>
+      <input id="j-code" type="text" maxlength="16" placeholder="ex: aB3xKp9z" style="width:100%;background:var(--bg-input,#1e1e2e);color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;font-size:0.9rem;letter-spacing:0.1em">
+    </div>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="hideModals()">Annuler</button>
+      <button class="btn btn-primary" onclick="joinClub()">Rejoindre</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => { if(window.lucide) lucide.createIcons(); });
+
+function showCreate() { document.getElementById('modal-create').style.display='flex'; }
+function showJoin()   { document.getElementById('modal-join').style.display='flex'; }
+function hideModals() {
+  document.getElementById('modal-create').style.display='none';
+  document.getElementById('modal-join').style.display='none';
+}
+document.querySelectorAll('#modal-create,#modal-join').forEach(m => m.addEventListener('click', hideModals));
+
+async function createClub() {
+  const name = document.getElementById('c-name').value.trim();
+  const desc = document.getElementById('c-desc').value.trim();
+  if (!name) return alert('Nom requis');
+  const r = await fetch('/api/clubs', {
+    method: 'POST', credentials: 'include',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({name, description: desc}),
+  });
+  if (r.ok) {
+    const d = await r.json();
+    alert(`Club créé ! Code d'invitation : ${d.invite_code}`);
+    location.reload();
+  } else {
+    const e = await r.json();
+    alert(e.detail || 'Erreur');
+  }
+}
+
+async function joinClub() {
+  const code = document.getElementById('j-code').value.trim();
+  if (!code) return alert('Code requis');
+  const r = await fetch(`/api/clubs/join/${code}`, { method: 'POST', credentials: 'include' });
+  if (r.ok) {
+    const d = await r.json();
+    alert(`Bienvenue dans "${d.club_name}" !`);
+    location.href = '/clubs/' + d.club_id;
+  } else {
+    const e = await r.json();
+    alert(e.detail || 'Erreur');
+  }
+}
+</script>
+{% endblock %}

@@ -31,3 +31,4 @@ class AdminUserUpdate(BaseModel):
     role: Optional[str] = None
     is_active: Optional[bool] = None
     must_change_password: Optional[bool] = None
+    coach_id: Optional[int] = None

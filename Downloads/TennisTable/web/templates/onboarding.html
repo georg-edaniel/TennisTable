@@ -6,7 +6,7 @@
   <title>Bienvenue — TT Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/app.css?v=3">
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -144,25 +144,77 @@
       </div>
     </div>
 
-    <!-- Step 3: Racket -->
+    <!-- Step 3: BLE setup guide -->
     <div x-show="step === 3" x-transition>
-      <div class="step-title">Votre raquette 🏓</div>
-      <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:1rem">Associez une raquette connectée à votre compte (optionnel).</p>
-      <div class="racket-grid">
+      <div class="step-title">Connecter votre raquette 🏓</div>
+      <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:1.25rem">
+        Suivez ces 4 étapes pour connecter votre raquette intelligente.
+      </p>
+
+      <!-- Step cards -->
+      <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.5rem">
+
+        <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:10px">
+          <div style="min-width:28px;height:28px;background:#10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;color:#fff">1</div>
+          <div>
+            <div style="font-weight:700;font-size:0.875rem;margin-bottom:2px">Chargez votre raquette</div>
+            <div style="color:var(--text-muted);font-size:0.8rem">Branchez-la via USB-C pendant au moins 30 min avant la première utilisation.</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem;background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.2);border-radius:10px">
+          <div style="min-width:28px;height:28px;background:#6366f1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;color:#fff">2</div>
+          <div>
+            <div style="font-weight:700;font-size:0.875rem;margin-bottom:2px">Allumez la raquette</div>
+            <div style="color:var(--text-muted);font-size:0.8rem">Appuyez 2 secondes sur le bouton latéral. La LED bleue clignote = prête à connecter.</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);border-radius:10px">
+          <div style="min-width:28px;height:28px;background:#f59e0b;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;color:#fff">3</div>
+          <div>
+            <div style="font-weight:700;font-size:0.875rem;margin-bottom:2px">Cliquez "Connecter ma raquette" dans l'app</div>
+            <div style="color:var(--text-muted);font-size:0.8rem">
+              Depuis le dashboard ou la sidebar, cliquez le bouton Bluetooth.
+              Chrome ouvre une liste — sélectionnez <em>"TableTennisBat1"</em>. C'est tout !
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem;background:rgba(139,92,246,0.07);border:1px solid rgba(139,92,246,0.2);border-radius:10px">
+          <div style="min-width:28px;height:28px;background:#8b5cf6;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:800;color:#fff">4</div>
+          <div>
+            <div style="font-weight:700;font-size:0.875rem;margin-bottom:2px">La raquette apparaît dans l'app</div>
+            <div style="color:var(--text-muted);font-size:0.8rem">La LED verte s'allume en sidebar — votre raquette est prête. Démarrez votre première session !</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Racket list (if any registered) -->
+      <div style="text-align:right;margin-bottom:0.75rem">
+        <a href="/setup" target="_blank" style="font-size:0.8rem;color:var(--accent-blue);text-decoration:none">
+          Guide complet + dépannage →
+        </a>
+      </div>
+
+      {% if rackets %}
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem">Raquettes disponibles — sélectionnez la vôtre :</div>
+      <div class="racket-grid" style="margin-bottom:1rem">
         {% for r in rackets %}
         <div class="racket-item" :class="selectedRacket === {{ r.id }} ? 'selected' : ''"
              @click="selectedRacket = (selectedRacket === {{ r.id }} ? null : {{ r.id }})">
           <div style="font-size:1.5rem;margin-bottom:0.4rem">🏓</div>
           <div style="font-size:0.8rem;font-weight:600">{{ r.label or r.ble_device_name }}</div>
         </div>
-        {% else %}
-        <div style="color:var(--text-muted);font-size:0.875rem;grid-column:1/-1">Aucune raquette disponible pour le moment.</div>
         {% endfor %}
       </div>
-      <div style="display:flex;gap:0.75rem;margin-top:1.25rem">
+      {% endif %}
+
+      <div style="display:flex;gap:0.75rem;margin-top:0.5rem">
         <button class="btn btn-ghost" @click="step = 4" style="flex:1;justify-content:center">Passer</button>
         <button class="btn btn-primary" @click="step3Next" :disabled="loading" style="flex:2;justify-content:center">
-          <span x-text="loading ? 'Association...' : 'Continuer'"></span>
+          <span x-text="loading ? 'Enregistrement...' : 'Compris — continuer'"></span>
           <i data-lucide="arrow-right" style="width:16px;height:16px"></i>
         </button>
       </div>

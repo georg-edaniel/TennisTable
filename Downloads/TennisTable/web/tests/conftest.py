@@ -48,6 +48,7 @@ def client(test_engine):
             db.close()
 
     from web.main import app
+    from web.core.rate_limit import limiter
     app.dependency_overrides[get_db] = _override_db
 
     # Seed minimal dans la DB de test
@@ -55,11 +56,22 @@ def client(test_engine):
     _seed(db)
     db.close()
 
+    # Reset rate-limiter storage so tests don't hit 429
+    try:
+        limiter._storage.reset()
+    except Exception:
+        pass
+
     # Pas de `with` → le lifespan (MQTT/alembic) ne tourne PAS pendant les tests
     c = TestClient(app, raise_server_exceptions=True)
     yield c
 
     app.dependency_overrides.clear()
+    # Reset limiter again after the test
+    try:
+        limiter._storage.reset()
+    except Exception:
+        pass
 
 
 def _seed(db):
@@ -76,6 +88,7 @@ def _seed(db):
         elo_matches=0,
         elo_wins=0,
         elo_last_change=0.0,
+        subscription_tier="free",
     )
     player = User(
         username="joueur1",
@@ -89,6 +102,7 @@ def _seed(db):
         elo_matches=0,
         elo_wins=0,
         elo_last_change=0.0,
+        subscription_tier="free",
     )
     db.add_all([admin, player])
     db.flush()

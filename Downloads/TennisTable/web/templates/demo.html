@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Démo — TT Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/app.css?v=3">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
+
+<!-- Demo Banner -->
+<div style="background:linear-gradient(90deg,#f59e0b,#d97706);color:#000;text-align:center;padding:0.6rem 1rem;font-weight:700;font-size:0.9rem;position:sticky;top:0;z-index:100">
+  🎯 Mode démo — données fictives · Aucune raquette connectée ·
+  <a href="/login" style="color:#000;text-decoration:underline;margin-left:0.5rem">Créer mon compte gratuit →</a>
+</div>
+
+<div style="max-width:1100px;margin:0 auto;padding:2rem 1rem">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;flex-wrap:wrap;gap:1rem">
+    <div>
+      <div style="font-size:1.5rem;margin-bottom:0.25rem">🏓</div>
+      <h1 style="font-size:1.75rem;font-weight:900;margin:0">TT Tracker</h1>
+      <p style="color:var(--text-muted);margin:0">Dashboard Démo</p>
+    </div>
+    <a href="/login" class="btn btn-primary btn-lg">
+      Créer mon compte gratuit
+    </a>
+  </div>
+
+  <!-- Stats cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:2rem">
+    <div class="card" style="padding:1.25rem">
+      <div style="font-size:0.8rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Coups enregistrés</div>
+      <div style="font-size:2.25rem;font-weight:900;margin-top:0.25rem">{{ stats.total_strokes }}</div>
+    </div>
+    <div class="card" style="padding:1.25rem">
+      <div style="font-size:0.8rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Sessions</div>
+      <div style="font-size:2.25rem;font-weight:900;margin-top:0.25rem">{{ stats.sessions }}</div>
+    </div>
+    <div class="card" style="padding:1.25rem">
+      <div style="font-size:0.8rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Style de jeu</div>
+      <div style="font-size:1.5rem;font-weight:900;margin-top:0.25rem">{{ stats.style }}</div>
+    </div>
+    <div class="card" style="padding:1.25rem">
+      <div style="font-size:0.8rem;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Coup dominant</div>
+      <div style="font-size:1rem;font-weight:700;margin-top:0.5rem;color:var(--accent-blue)">{{ stats.top_shot }}</div>
+    </div>
+  </div>
+
+  <!-- Chart + History -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem" x-data>
+    <!-- Radar chart -->
+    <div class="card" style="padding:1.25rem">
+      <h3 style="font-weight:700;margin-bottom:1rem">Radar de style</h3>
+      <div id="demo-radar"></div>
+    </div>
+
+    <!-- Recent sessions -->
+    <div class="card" style="padding:1.25rem">
+      <h3 style="font-weight:700;margin-bottom:1rem">Dernières sessions</h3>
+      <div style="display:flex;flex-direction:column;gap:0.75rem">
+        {% for s in stats.recent %}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0.75rem;background:rgba(255,255,255,0.04);border-radius:8px">
+          <span style="color:var(--text-muted);font-size:0.85rem">{{ s.date }}</span>
+          <span style="font-weight:700">{{ s.strokes }} coups</span>
+          <span class="badge badge-blue">{{ s.style }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="card" style="padding:2rem;text-align:center;background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(16,185,129,0.08))">
+    <h2 style="font-size:1.5rem;font-weight:900;margin-bottom:0.5rem">Prêt à analyser votre vrai jeu ?</h2>
+    <p style="color:var(--text-muted);margin-bottom:1.5rem">Créez votre compte gratuit et connectez votre raquette BLE.</p>
+    <a href="/login" class="btn btn-primary btn-lg" style="margin-right:0.75rem">
+      Créer mon compte gratuit
+    </a>
+    <a href="/" class="btn btn-ghost btn-lg">En savoir plus</a>
+  </div>
+
+</div>
+
+<script>
+const radarData = {{ stats_json | safe }};
+const chart = new ApexCharts(document.getElementById('demo-radar'), {
+  chart: { type: 'radar', height: 280, toolbar: { show: false }, background: 'transparent' },
+  series: [{ name: 'Niveau', data: radarData.values }],
+  xaxis: { categories: radarData.categories },
+  fill: { opacity: 0.3 },
+  stroke: { width: 2 },
+  markers: { size: 4 },
+  colors: ['#6366f1'],
+  theme: { mode: 'dark' },
+  yaxis: { show: false },
+  plotOptions: { radar: { polygons: { strokeColors: 'rgba(255,255,255,0.1)', fill: { colors: ['transparent'] } } } }
+});
+chart.render();
+</script>
+</body>
+</html>

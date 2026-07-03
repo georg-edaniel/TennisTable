@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/static/manifest.json">
+  <title>🏓 Jouer — TT Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --p1: #6366f1;
+      --p2: #f43f5e;
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f1f5f9;
+      --muted: #64748b;
+      --radius: 1.25rem;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .75rem 1rem;
+      border-bottom: 1px solid #1e293b;
+    }
+
+    header h1 { font-size: 1.1rem; font-weight: 700; }
+    header .logo { font-size: 1.4rem; }
+
+    #btn-new-game {
+      background: #334155;
+      color: var(--text);
+      border: none;
+      border-radius: .75rem;
+      padding: .45rem .9rem;
+      font-size: .85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    #btn-new-game:hover { background: #475569; }
+
+    /* ── Score bar ───────────────────────────────────────────────── */
+    #scorebar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      padding: 1.25rem 1rem .75rem;
+      position: relative;
+    }
+
+    .score-num {
+      font-size: clamp(4rem, 18vw, 7rem);
+      font-weight: 900;
+      line-height: 1;
+      transition: transform .1s;
+    }
+    .score-num.bump { transform: scale(1.25); }
+    #score-p1 { color: var(--p1); }
+    #score-p2 { color: var(--p2); }
+
+    .score-sep {
+      font-size: clamp(2.5rem, 10vw, 4.5rem);
+      font-weight: 300;
+      color: var(--muted);
+    }
+
+    #set-info {
+      font-size: .8rem;
+      color: var(--muted);
+      text-align: center;
+      padding-bottom: .5rem;
+    }
+
+    /* ── Players grid ────────────────────────────────────────────── */
+    #players {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+      padding: .5rem .75rem;
+      flex: 1;
+    }
+
+    .player-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 1rem .875rem;
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+      border: 2px solid transparent;
+      transition: border-color .2s;
+    }
+    .player-card.connected-1 { border-color: var(--p1); }
+    .player-card.connected-2 { border-color: var(--p2); }
+
+    .player-name {
+      font-size: .85rem;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .player-name.c1 { color: var(--p1); }
+    .player-name.c2 { color: var(--p2); }
+
+    /* Stroke bubble */
+    .stroke-display {
+      background: #0f172a;
+      border-radius: .875rem;
+      padding: .75rem .5rem;
+      min-height: 5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: .25rem;
+      transition: background .3s;
+    }
+    .stroke-emoji { font-size: 1.75rem; line-height: 1; }
+    .stroke-name  { font-size: .7rem; font-weight: 600; color: var(--muted); text-align: center; }
+
+    /* Count badges */
+    .stroke-counts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .35rem;
+    }
+    .badge {
+      background: #0f172a;
+      border-radius: .5rem;
+      padding: .3rem .4rem;
+      font-size: .65rem;
+      display: flex;
+      align-items: center;
+      gap: .25rem;
+      overflow: hidden;
+    }
+    .badge span:first-child { font-size: .9rem; }
+    .badge .bval { font-weight: 700; color: var(--text); margin-left: auto; font-size: .75rem; }
+
+    /* Point button */
+    .btn-point {
+      border: none;
+      border-radius: .875rem;
+      padding: .7rem;
+      font-size: .9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .1s, filter .15s;
+      width: 100%;
+    }
+    .btn-point:active { transform: scale(.95); }
+    .btn-point-1 { background: var(--p1); color: #fff; }
+    .btn-point-2 { background: var(--p2); color: #fff; }
+    .btn-point:hover { filter: brightness(1.1); }
+
+    /* Connect button */
+    .btn-connect {
+      border: 1.5px solid var(--muted);
+      background: transparent;
+      color: var(--text);
+      border-radius: .875rem;
+      padding: .55rem .5rem;
+      font-size: .78rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .4rem;
+      transition: border-color .2s, background .2s;
+    }
+    .btn-connect:hover { background: #334155; }
+    .btn-connect.connected { border-color: #22c55e; color: #22c55e; }
+    .btn-connect .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+    }
+    .btn-connect.connected .dot { background: #22c55e; animation: pulse 1.5s infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .4; }
+    }
+
+    /* ── Winner overlay ──────────────────────────────────────────── */
+    #winner-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.85);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1.5rem;
+      text-align: center;
+      padding: 2rem;
+    }
+    #winner-overlay.show { display: flex; }
+    #winner-emoji { font-size: 5rem; }
+    #winner-text { font-size: 2rem; font-weight: 900; }
+    #winner-sub  { color: var(--muted); font-size: 1rem; }
+    #btn-winner-new {
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 1rem;
+      padding: .875rem 2.5rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* ── No BLE warning ─────────────────────────────────────────── */
+    #ble-warning {
+      display: none;
+      background: #7c2d12;
+      color: #fed7aa;
+      padding: .6rem 1rem;
+      font-size: .8rem;
+      text-align: center;
+    }
+
+    /* ── Bottom hint ─────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      font-size: .7rem;
+      color: var(--muted);
+      padding: .5rem 1rem .75rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- No BLE warning -->
+<div id="ble-warning">
+  ⚠️ Bluetooth non disponible. Utilise Chrome sur Android ou Chrome Desktop.
+</div>
+
+<!-- Header -->
+<header>
+  <span class="logo">🏓</span>
+  <h1>TT Tracker — Jouer</h1>
+  <button id="btn-new-game" onclick="newGame()">Nouveau jeu</button>
+</header>
+
+<!-- Score bar -->
+<div id="scorebar">
+  <span id="score-p1" class="score-num">0</span>
+  <span class="score-sep">–</span>
+  <span id="score-p2" class="score-num">0</span>
+</div>
+<p id="set-info">Premier à 11 points (écart de 2)</p>
+
+<!-- Players -->
+<div id="players">
+
+  <!-- Joueur 1 -->
+  <div class="player-card" id="card-0">
+    <div class="player-name c1">Joueur 1</div>
+
+    <div class="stroke-display" id="stroke-0">
+      <span class="stroke-emoji">🏓</span>
+      <span class="stroke-name">En attente…</span>
+    </div>
+
+    <div class="stroke-counts" id="counts-0">
+      <div class="badge">🏓 <span>Drive</span><span class="bval" id="c0-0">0</span></div>
+      <div class="badge">⚡ <span>Smash</span><span class="bval" id="c0-1">0</span></div>
+      <div class="badge">🎯 <span>FH Dr.</span><span class="bval" id="c0-2">0</span></div>
+      <div class="badge">🌀 <span>Loop</span><span class="bval" id="c0-3">0</span></div>
+    </div>
+
+    <button class="btn-connect" id="btn-ble-0" onclick="connectRacket(0)">
+      <span class="dot"></span> Connecter raquette
+    </button>
+
+    <button class="btn-point btn-point-1" onclick="addPoint(0)">+1 Point</button>
+  </div>
+
+  <!-- Joueur 2 -->
+  <div class="player-card" id="card-1">
+    <div class="player-name c2">Joueur 2</div>
+
+    <div class="stroke-display" id="stroke-1">
+      <span class="stroke-emoji">🏓</span>
+      <span class="stroke-name">En attente…</span>
+    </div>
+
+    <div class="stroke-counts" id="counts-1">
+      <div class="badge">🏓 <span>Drive</span><span class="bval" id="c1-0">0</span></div>
+      <div class="badge">⚡ <span>Smash</span><span class="bval" id="c1-1">0</span></div>
+      <div class="badge">🎯 <span>FH Dr.</span><span class="bval" id="c1-2">0</span></div>
+      <div class="badge">🌀 <span>Loop</span><span class="bval" id="c1-3">0</span></div>
+    </div>
+
+    <button class="btn-connect" id="btn-ble-1" onclick="connectRacket(1)">
+      <span class="dot"></span> Connecter raquette
+    </button>
+
+    <button class="btn-point btn-point-2" onclick="addPoint(1)">+1 Point</button>
+  </div>
+
+</div>
+
+<footer>Appuie sur "Connecter raquette" puis allume ta raquette 🏓</footer>
+
+<!-- Winner overlay -->
+<div id="winner-overlay">
+  <div id="winner-emoji">🏆</div>
+  <div id="winner-text">Joueur 1 gagne !</div>
+  <div id="winner-sub" id="winner-score-text"></div>
+  <button id="btn-winner-new" onclick="newGame()">Rejouer</button>
+</div>
+
+<script>
+const SERVICE_UUID = '19b10000-e8f2-537e-4f6c-d104768a1214';
+const CHAR_UUID    = '19b10001-e8f2-537e-4f6c-d104768a1214';
+
+const STROKES = [
+  { name: 'BH Drive', emoji: '🏓', color: '#4ade80' },
+  { name: 'BH Smash', emoji: '⚡', color: '#f87171' },
+  { name: 'FH Drive', emoji: '🎯', color: '#60a5fa' },
+  { name: 'FH Loop',  emoji: '🌀', color: '#c084fc' },
+  { name: 'FH Smash', emoji: '💥', color: '#fb923c' },
+];
+
+const state = {
+  scores:  [0, 0],
+  counts:  [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0]],
+  devices: [null, null],
+  gameOver: false,
+};
+
+// ── BLE ──────────────────────────────────────────────────────────
+async function connectRacket(pi) {
+  if (!navigator.bluetooth) {
+    document.getElementById('ble-warning').style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('btn-ble-' + pi);
+  btn.textContent = 'Connexion…';
+  btn.disabled = true;
+
+  try {
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: 'TableTennisBat' }],
+      optionalServices: [SERVICE_UUID]
+    });
+
+    device.addEventListener('gattserverdisconnected', () => onDisconnect(pi, device));
+
+    const server = await device.gatt.connect();
+    const svc    = await server.getPrimaryService(SERVICE_UUID);
+    const char   = await svc.getCharacteristic(CHAR_UUID);
+    await char.startNotifications();
+    char.addEventListener('characteristicvaluechanged', e => {
+      const v = e.target.value.getUint8(0);
+      if (v < 5) onStroke(pi, v);
+    });
+
+    state.devices[pi] = device;
+
+    btn.innerHTML = '<span class="dot"></span> ' + (device.name || 'Raquette ' + (pi+1));
+    btn.className = 'btn-connect connected';
+    btn.disabled = false;
+    document.getElementById('card-' + pi).classList.add('connected-' + (pi+1));
+
+  } catch (err) {
+    btn.innerHTML = '<span class="dot"></span> Connecter raquette';
+    btn.disabled = false;
+    if (err.name !== 'NotFoundError') console.error(err);
+  }
+}
+
+function onDisconnect(pi, device) {
+  state.devices[pi] = null;
+  const btn = document.getElementById('btn-ble-' + pi);
+  btn.innerHTML = '<span class="dot"></span> Connecter raquette';
+  btn.className = 'btn-connect';
+  document.getElementById('card-' + pi).classList.remove('connected-' + (pi+1));
+
+  // Auto-reconnect
+  setTimeout(() => {
+    if (!state.devices[pi] && device.gatt) {
+      device.gatt.connect().then(server => {
+        return server.getPrimaryService(SERVICE_UUID);
+      }).then(svc => svc.getCharacteristic(CHAR_UUID)).then(char => {
+        char.startNotifications();
+        char.addEventListener('characteristicvaluechanged', e => {
+          const v = e.target.value.getUint8(0);
+          if (v < 5) onStroke(pi, v);
+        });
+        state.devices[pi] = device;
+        const b = document.getElementById('btn-ble-' + pi);
+        b.innerHTML = '<span class="dot"></span> ' + (device.name || 'Raquette ' + (pi+1));
+        b.className = 'btn-connect connected';
+        document.getElementById('card-' + pi).classList.add('connected-' + (pi+1));
+      }).catch(() => {});
+    }
+  }, 3000);
+}
+
+// ── Stroke event ──────────────────────────────────────────────────
+function onStroke(pi, strokeIdx) {
+  if (state.gameOver) return;
+  const s = STROKES[strokeIdx];
+  state.counts[pi][strokeIdx]++;
+
+  // Update stroke display
+  const disp = document.getElementById('stroke-' + pi);
+  disp.querySelector('.stroke-emoji').textContent = s.emoji;
+  disp.querySelector('.stroke-name').textContent  = s.name;
+  disp.style.background = s.color + '22';
+  setTimeout(() => { disp.style.background = ''; }, 900);
+
+  // Update count badge (show only first 4 types in badges)
+  if (strokeIdx < 4) {
+    document.getElementById('c' + pi + '-' + strokeIdx).textContent =
+      state.counts[pi][strokeIdx];
+  }
+}
+
+// ── Score ─────────────────────────────────────────────────────────
+function addPoint(pi) {
+  if (state.gameOver) return;
+  state.scores[pi]++;
+  renderScore();
+  checkWinner();
+}
+
+function renderScore() {
+  for (let i = 0; i < 2; i++) {
+    const el = document.getElementById('score-p' + (i+1));
+    el.textContent = state.scores[i];
+    el.classList.remove('bump');
+    void el.offsetWidth; // reflow
+    el.classList.add('bump');
+    setTimeout(() => el.classList.remove('bump'), 200);
+  }
+}
+
+function checkWinner() {
+  const [s0, s1] = state.scores;
+  const maxScore = Math.max(s0, s1);
+  const minScore = Math.min(s0, s1);
+  if (maxScore >= 11 && maxScore - minScore >= 2) {
+    const winner = s0 > s1 ? 0 : 1;
+    showWinner(winner);
+  }
+}
+
+function showWinner(pi) {
+  state.gameOver = true;
+  const overlay = document.getElementById('winner-overlay');
+  document.getElementById('winner-emoji').textContent = pi === 0 ? '🏆' : '🥇';
+  document.getElementById('winner-text').textContent = 'Joueur ' + (pi+1) + ' gagne !';
+  document.getElementById('winner-sub').textContent =
+    state.scores[0] + ' – ' + state.scores[1];
+  overlay.classList.add('show');
+}
+
+// ── New game ──────────────────────────────────────────────────────
+function newGame() {
+  state.scores  = [0, 0];
+  state.counts  = [[0,0,0,0,0],[0,0,0,0,0]];
+  state.gameOver = false;
+
+  document.getElementById('score-p1').textContent = '0';
+  document.getElementById('score-p2').textContent = '0';
+  document.getElementById('winner-overlay').classList.remove('show');
+
+  for (let pi = 0; pi < 2; pi++) {
+    document.getElementById('stroke-' + pi).querySelector('.stroke-emoji').textContent = '🏓';
+    document.getElementById('stroke-' + pi).querySelector('.stroke-name').textContent  = 'En attente…';
+    document.getElementById('stroke-' + pi).style.background = '';
+    for (let k = 0; k < 4; k++) {
+      const el = document.getElementById('c' + pi + '-' + k);
+      if (el) el.textContent = '0';
+    }
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+if (!navigator.bluetooth) {
+  document.getElementById('ble-warning').style.display = 'block';
+}
+</script>
+</body>
+</html>

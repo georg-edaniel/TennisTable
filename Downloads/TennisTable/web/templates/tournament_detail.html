@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}{{ tournament.name }} — TT Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+    <div>
+      <div style="display:flex;align-items:center;gap:0.75rem">
+        <a href="/tournaments" style="color:var(--text-muted);text-decoration:none;font-size:0.85rem">← Tournois</a>
+      </div>
+      <h1 class="page-title">{{ tournament.name }}</h1>
+      <p class="page-subtitle">
+        Max {{ tournament.max_players }} joueurs &nbsp;·&nbsp;
+        {% if tournament.status == 'active' %}
+          <span class="badge badge-green">En cours</span>
+        {% elif tournament.status == 'completed' %}
+          <span class="badge badge-gray">Terminé</span>
+        {% else %}
+          <span class="badge badge-orange">En attente</span>
+        {% endif %}
+      </p>
+    </div>
+    <div style="display:flex;gap:0.5rem">
+      {% if tournament.status == 'pending' and not is_registered %}
+      <button class="btn btn-primary" onclick="joinTournament({{ tournament.id }})">
+        <i data-lucide="user-plus" style="width:16px;height:16px"></i>
+        Rejoindre
+      </button>
+      {% elif tournament.status == 'pending' and is_registered %}
+      <span class="badge badge-green" style="align-self:center">Inscrit ✓</span>
+      {% endif %}
+      {% if user.role == 'admin' and tournament.status == 'pending' %}
+      <button class="btn btn-success" onclick="startTournament({{ tournament.id }})">
+        <i data-lucide="play" style="width:16px;height:16px"></i>
+        Démarrer
+      </button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:220px 1fr;gap:1.5rem;align-items:start">
+
+  <!-- ── Participants sidebar ── -->
+  <div class="card animate-in">
+    <div style="font-weight:700;margin-bottom:0.75rem;font-size:0.9rem;display:flex;align-items:center;gap:6px">
+      <i data-lucide="users" style="width:14px;height:14px;color:var(--accent-blue)"></i>
+      Participants ({{ participants | length }})
+    </div>
+    {% if participants %}
+    <div style="display:flex;flex-direction:column;gap:0.5rem">
+      {% for p in participants %}
+      <div style="display:flex;align-items:center;justify-content:space-between;font-size:0.85rem;padding:4px 0;border-bottom:1px solid var(--border)">
+        <span style="font-weight:{% if p.seed == 1 %}700{% else %}400{% endif %}">
+          {% if p.seed > 0 %}[{{ p.seed }}]{% endif %} {{ p.name }}
+        </span>
+        <span class="elo-badge elo-bronze" style="font-size:0.7rem;padding:1px 6px">{{ p.elo | round(0) | int }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div style="color:var(--text-muted);font-size:0.85rem;text-align:center;padding:1rem 0">Aucun participant</div>
+    {% endif %}
+  </div>
+
+  <!-- ── Bracket ── -->
+  <div class="card animate-in" style="overflow-x:auto">
+    <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+      <i data-lucide="git-branch" style="width:16px;height:16px;color:var(--accent-purple)"></i>
+      Bracket
+    </div>
+
+    {% if bracket %}
+    <div class="bracket-container">
+      {% for round_num in rounds %}
+      <div class="bracket-round">
+        <div style="text-align:center;font-size:0.75rem;font-weight:700;color:var(--text-muted);margin-bottom:0.5rem;letter-spacing:0.05em">
+          {% if loop.last %}FINALE{% elif loop.revindex == 2 %}DEMI-FINALE{% else %}ROUND {{ round_num }}{% endif %}
+        </div>
+        {% for match in bracket[round_num] %}
+        <div class="bracket-match" x-data="{editing:false,s1:'',s2:''}">
+          <div class="bracket-player {% if match.winner == match.player1 and match.status == 'completed' %}winner{% endif %}">
+            <span>{{ match.player1 or 'BYE' }}</span>
+            <span>{{ match.score_p1 if match.score_p1 is not none else '—' }}</span>
+          </div>
+          <div style="height:1px;background:var(--border);margin:3px 0"></div>
+          <div class="bracket-player {% if match.winner == match.player2 and match.status == 'completed' %}winner{% endif %}">
+            <span>{{ match.player2 or 'BYE' }}</span>
+            <span>{{ match.score_p2 if match.score_p2 is not none else '—' }}</span>
+          </div>
+
+          {% if user.role == 'admin' and match.status == 'pending' and match.player1 and match.player2 %}
+          <div x-show="!editing" style="margin-top:4px">
+            <button class="btn btn-ghost btn-sm" style="width:100%;font-size:0.72rem" @click="editing=true">
+              Saisir score
+            </button>
+          </div>
+          <div x-show="editing" style="margin-top:6px">
+            <div style="display:flex;gap:4px;align-items:center;font-size:0.8rem">
+              <input type="number" x-model="s1" class="input" style="width:48px;padding:3px 6px;text-align:center" min="0" placeholder="0">
+              <span style="color:var(--text-muted)">—</span>
+              <input type="number" x-model="s2" class="input" style="width:48px;padding:3px 6px;text-align:center" min="0" placeholder="0">
+              <button class="btn btn-success btn-sm" style="padding:3px 8px"
+                @click="
+                  fetch('/api/tournaments/{{ tournament.id }}/matches/{{ match.id }}/result',{
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({score_p1:parseInt(s1),score_p2:parseInt(s2)})
+                  }).then(r=>r.json()).then(d=>{if(d.ok)location.reload();})
+                ">✓</button>
+              <button class="btn btn-ghost btn-sm" style="padding:3px 6px" @click="editing=false">✕</button>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if match.status == 'bye' %}
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px">BYE — avance auto</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <span style="font-size:2rem">🎯</span>
+      <span>Le bracket sera généré au démarrage du tournoi</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+
+function joinTournament(id) {
+  fetch(`/api/tournaments/${id}/join`, { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) location.reload();
+      else alert(d.detail || 'Erreur');
+    });
+}
+
+function startTournament(id) {
+  if (!confirm('Démarrer le tournoi ? Les inscriptions seront fermées.')) return;
+  fetch(`/api/tournaments/${id}/start`, { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) location.reload();
+      else alert(d.detail || 'Erreur');
+    });
+}
+</script>
+{% endblock %}

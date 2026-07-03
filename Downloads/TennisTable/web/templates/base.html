@@ -1,6 +1,13 @@
 <!DOCTYPE html>
-<html lang="fr" x-data>
+<html lang="{{ lang|default('fr') }}" data-theme="dark" x-data>
 <head>
+<!-- Apply theme from localStorage BEFORE Alpine/CSS paint — prevents flash -->
+<script>
+  (function() {
+    var th = localStorage.getItem('tt_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', th);
+  })();
+</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}TT Tracker{% endblock %}</title>
@@ -10,10 +17,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS (build purgé — npx tailwindcss -i ... -o tailwind.min.css --minify) -->
-  <link rel="stylesheet" href="/static/css/tailwind.min.css">
+  <link rel="stylesheet" href="/static/css/tailwind.min.css?v={{ css_v }}">
 
   <!-- Design tokens + composants custom -->
-  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/app.css?v={{ css_v }}">
 
   <!-- Alpine.js (defer so store is init'd before DOM) -->
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -27,68 +34,128 @@
   <!-- App JS (store + WS client) — before Alpine.start -->
   <script src="/static/js/app.js"></script>
 
+  <!-- PWA -->
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#6366f1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js');</script>
+
   {% block head %}{% endblock %}
 </head>
-<body class="dark" x-init="
+<body x-data="{
+  sidebarOpen: false,
+  theme: localStorage.getItem('tt_theme') || 'dark',
+  toggleTheme() {
+    this.theme = this.theme === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('tt_theme', this.theme);
+    document.documentElement.setAttribute('data-theme', this.theme);
+  }
+}" x-init="
   $store.tennis.initWS('{{ access_token|default('') }}');
 ">
 
 {% if user %}
+<!-- Mobile menu button -->
+<button class="menu-btn" @click="sidebarOpen = !sidebarOpen" aria-label="Menu">
+  <i data-lucide="menu" style="width:20px;height:20px"></i>
+</button>
+
+<!-- Sidebar overlay (mobile) -->
+<div class="sidebar-overlay" :class="sidebarOpen && 'open'" @click="sidebarOpen = false"></div>
+
 <!-- ── Sidebar ── -->
-<aside class="sidebar">
+<aside class="sidebar" :class="sidebarOpen && 'open'">
   <div class="sidebar-logo">
     <span>🏓</span>
     <span>TT Tracker</span>
   </div>
 
   <nav class="sidebar-nav">
-    <div class="sidebar-section">Navigation</div>
+    <div class="sidebar-section">{{ t('nav.navigation') }}</div>
     <a href="/dashboard" class="sidebar-link {% if request.url.path == '/dashboard' %}active{% endif %}">
       <i data-lucide="layout-dashboard" style="width:16px;height:16px"></i>
-      <span>Dashboard</span>
+      <span>{{ t('nav.dashboard') }}</span>
     </a>
 
-    <div class="sidebar-section" style="margin-top:0.5rem">Jeu</div>
+    <div class="sidebar-section" style="margin-top:0.5rem">{{ t('nav.game') }}</div>
     <a href="/training" class="sidebar-link {% if request.url.path == '/training' %}active{% endif %}">
       <i data-lucide="zap" style="width:16px;height:16px"></i>
-      <span>Entraînement</span>
+      <span>{{ t('nav.training') }}</span>
     </a>
     <a href="/match" class="sidebar-link {% if request.url.path == '/match' %}active{% endif %}">
       <i data-lucide="trophy" style="width:16px;height:16px"></i>
-      <span>Match</span>
+      <span>{{ t('nav.match') }}</span>
+    </a>
+    <a href="/setup" class="sidebar-link {% if request.url.path == '/setup' %}active{% endif %}">
+      <i data-lucide="bluetooth" style="width:16px;height:16px"></i>
+      <span>{{ t('nav.connect_racket') }}</span>
     </a>
     <a href="/leaderboard" class="sidebar-link {% if '/leaderboard' in request.url.path %}active{% endif %}">
       <i data-lucide="award" style="width:16px;height:16px"></i>
-      <span>Classement</span>
+      <span>{{ t('nav.leaderboard') }}</span>
     </a>
 
-    <div class="sidebar-section" style="margin-top:0.5rem">Données</div>
+    <div class="sidebar-section" style="margin-top:0.5rem">{{ t('nav.competitions') }}</div>
+    <a href="/tournaments" class="sidebar-link {% if '/tournaments' in request.url.path %}active{% endif %}">
+      <i data-lucide="trophy" style="width:16px;height:16px"></i>
+      <span>{{ t('nav.tournaments') }}</span>
+    </a>
+    <a href="/challenges" class="sidebar-link {% if '/challenges' in request.url.path %}active{% endif %}"
+       x-data="{ count: 0 }"
+       x-init="fetch('/api/challenges',{credentials:'include'}).then(r=>r.ok?r.json():{received:[]}).then(d=>{count=d.received?.length||0})">
+      <i data-lucide="swords" style="width:16px;height:16px"></i>
+      <span>{{ t('nav.challenges') }}</span>
+      <span x-show="count>0" x-text="count"
+            style="margin-left:auto;background:#f43f5e;color:#fff;border-radius:10px;padding:1px 7px;font-size:0.7rem;font-weight:700"></span>
+    </a>
+    <a href="/clubs" class="sidebar-link {% if '/clubs' in request.url.path %}active{% endif %}">
+      <i data-lucide="users" style="width:16px;height:16px"></i>
+      <span>{{ t('nav.clubs') }}</span>
+    </a>
+
+    <div class="sidebar-section" style="margin-top:0.5rem">{{ t('nav.data') }}</div>
     <a href="/analysis" class="sidebar-link {% if request.url.path == '/analysis' %}active{% endif %}">
       <i data-lucide="bar-chart-2" style="width:16px;height:16px"></i>
-      <span>Analyse</span>
+      <span>{{ t('nav.analysis') }}</span>
     </a>
     <a href="/rackets" class="sidebar-link {% if request.url.path == '/rackets' %}active{% endif %}">
       <i data-lucide="circle" style="width:16px;height:16px"></i>
-      <span>Raquettes</span>
+      <span>{{ t('nav.rackets') }}</span>
     </a>
 
     {% if user.role == 'admin' %}
-    <div class="sidebar-section" style="margin-top:0.5rem">Admin</div>
+    <div class="sidebar-section" style="margin-top:0.5rem">{{ t('nav.admin') }}</div>
     <a href="/admin/users" class="sidebar-link {% if '/admin' in request.url.path %}active{% endif %}">
       <i data-lucide="users" style="width:16px;height:16px"></i>
-      <span>Utilisateurs</span>
+      <span>{{ t('nav.users') }}</span>
     </a>
     {% endif %}
   </nav>
 
   <div class="sidebar-footer">
-    <!-- BLE status -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.75rem;font-size:0.8rem;">
-      <span class="dot" :class="$store.tennis.bleConnected ? 'dot-green animate-pulse' : 'dot-gray'"></span>
-      <span x-text="$store.tennis.bleConnected ? 'BLE connecté' : 'BLE déconnecté'" style="color:var(--text-muted)"></span>
+    <!-- BLE connect button -->
+    <div style="margin-bottom:0.75rem;">
+      <template x-if="!$store.tennis.webBleConnected">
+        <button @click="$store.tennis.connectBLE()"
+                class="btn btn-ghost btn-sm"
+                style="width:100%;justify-content:center;border:1px solid rgba(99,102,241,0.4);color:var(--accent-blue)">
+          <span class="dot dot-gray" style="width:8px;height:8px;min-width:8px;border-radius:50%;background:#6b7280"></span>
+          <span>{{ t('nav.connect_my_racket') }}</span>
+        </button>
+      </template>
+      <template x-if="$store.tennis.webBleConnected">
+        <button @click="$store.tennis.disconnectBLE()"
+                class="btn btn-ghost btn-sm"
+                style="width:100%;justify-content:center;border:1px solid rgba(16,185,129,0.4);color:#10b981">
+          <span class="dot dot-green animate-pulse" style="width:8px;height:8px;min-width:8px;border-radius:50%;background:#10b981"></span>
+          <span x-text="$store.tennis.webBleDevice || '{{ t('nav.racket_connected') }}'"></span>
+        </button>
+      </template>
     </div>
     <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;font-weight:600;">
-      {{ user.display_name or user.username }}
+      <a href="/player/{{ user.id }}" style="color:var(--text-primary);text-decoration:none">{{ user.display_name or user.username }}</a>
       <span class="badge badge-{% if user.role == 'admin' %}orange{% elif user.role == 'player' %}blue{% else %}gray{% endif %}" style="margin-left:4px">
         {{ user.role }}
       </span>
@@ -105,19 +172,65 @@
         <span class="elo-badge elo-bronze" style="margin-bottom:0.4rem">🥉 {{ r | round(0) | int }}</span>
       {% endif %}
     {% else %}
-      <span style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.4rem">ELO 1500 — Débutant</span>
+      <span style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.4rem">{{ t('nav.elo_beginner') }}</span>
     {% endif %}
+
+    <!-- Theme toggle + Language switcher (row) -->
+    <div style="display:flex;gap:0.4rem;margin-bottom:0.4rem">
+      <button @click="toggleTheme()"
+              class="btn btn-ghost btn-sm"
+              style="flex:1;justify-content:center"
+              :title="theme === 'dark' ? '{{ t('theme.toggle') }} clair' : '{{ t('theme.toggle') }} sombre'">
+        <template x-if="theme === 'dark'">
+          <i data-lucide="sun" style="width:14px;height:14px"></i>
+        </template>
+        <template x-if="theme === 'light'">
+          <i data-lucide="moon" style="width:14px;height:14px"></i>
+        </template>
+      </button>
+      <a href="/set-lang?lang={{ 'en' if lang == 'fr' else 'fr' }}&next={{ request.url.path }}"
+         class="btn btn-ghost btn-sm"
+         style="flex:1;justify-content:center;font-size:0.78rem;font-weight:700;letter-spacing:0.04em">
+        {{ t('lang.switch') }}
+      </a>
+    </div>
+
     <a href="/change-password" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-bottom:0.4rem">
       <i data-lucide="key" style="width:14px;height:14px"></i>
-      <span>Mot de passe</span>
+      <span>{{ t('nav.password') }}</span>
     </a>
+    {% if user.subscription_tier == 'free' %}
+    <a href="/pricing" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-bottom:0.4rem;border:1px solid var(--accent-blue);color:var(--accent-blue)">
+      <i data-lucide="arrow-up-circle" style="width:14px;height:14px"></i>
+      <span>{{ t('nav.upgrade') }}</span>
+    </a>
+    {% endif %}
     <a href="/login" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location='/login');return false;"
        class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">
       <i data-lucide="log-out" style="width:14px;height:14px"></i>
-      <span>Déconnexion</span>
+      <span>{{ t('nav.logout') }}</span>
     </a>
   </div>
 </aside>
+
+<!-- ── Bannière iOS (Web Bluetooth non supporté) ── -->
+<div id="ios-ble-banner"
+     style="display:none;position:sticky;top:0;z-index:900;background:rgba(245,158,11,0.12);border-bottom:1px solid rgba(245,158,11,0.3);padding:0.6rem 1rem;font-size:0.82rem;color:#f59e0b;align-items:center;gap:0.6rem;flex-wrap:wrap">
+  <i data-lucide="alert-triangle" style="width:15px;height:15px;flex-shrink:0"></i>
+  <span><strong>{{ t('ios.ble_title') }}</strong> — {{ t('ios.ble_body') }}</span>
+  <button onclick="this.parentElement.style.display='none';localStorage.setItem('tt_ios_banner_dismissed','1')"
+          style="margin-left:auto;background:none;border:none;color:#f59e0b;cursor:pointer;font-size:1rem;line-height:1">✕</button>
+</div>
+<script>
+  (function() {
+    var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    var dismissed = localStorage.getItem('tt_ios_banner_dismissed');
+    if (isIOS && !dismissed) {
+      var b = document.getElementById('ios-ble-banner');
+      if (b) b.style.display = 'flex';
+    }
+  })();
+</script>
 
 <!-- ── Notifications ── -->
 <div style="position:fixed;top:1rem;right:1rem;z-index:999;display:flex;flex-direction:column;gap:8px;">
@@ -137,12 +250,40 @@
 </main>
 
 <script>
-  // Init Lucide icons after DOM
+  // Init Lucide icons after DOM + re-run on Alpine mutations (theme toggle uses x-if)
   document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) lucide.createIcons();
+  });
+  document.addEventListener('alpine:initialized', () => {
+    document.addEventListener('alpine:mutation', () => {
+      if (window.lucide) lucide.createIcons();
+    });
   });
 </script>
 
 {% block scripts %}{% endblock %}
+
+<!-- Cookie consent banner -->
+<div id="cookie-banner"
+     style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--bg-card);border-top:1px solid var(--border);padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap"
+     x-data="{ show: !localStorage.getItem('tt_cookie_consent') }"
+     x-show="show"
+     x-transition.opacity>
+  <p style="margin:0;font-size:0.875rem;color:var(--text-muted)">
+    🍪 {{ t('footer.cookie_msg') }}
+    <a href="/legal/privacy" style="color:var(--accent-blue)">{{ t('footer.learn_more') }}</a>
+  </p>
+  <button class="btn btn-primary btn-sm"
+          @click="localStorage.setItem('tt_cookie_consent','1'); show = false">
+    {{ t('footer.accept') }}
+  </button>
+</div>
+
+<!-- Footer legal links -->
+<footer style="text-align:center;padding:1rem;color:var(--text-muted);font-size:0.8rem;border-top:1px solid var(--border);margin-top:auto">
+  <a href="/legal/cgu" style="color:var(--text-muted);text-decoration:none;margin:0 0.5rem">{{ t('footer.cgu') }}</a> ·
+  <a href="/legal/privacy" style="color:var(--text-muted);text-decoration:none;margin:0 0.5rem">{{ t('footer.privacy') }}</a> ·
+  <span style="margin:0 0.5rem">🏓 {{ t('footer.copyright') }}</span>
+</footer>
 </body>
 </html>

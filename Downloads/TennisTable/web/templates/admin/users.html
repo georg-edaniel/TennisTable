@@ -14,23 +14,44 @@
         <tr>
           <th>ID</th>
           <th>Nom d'utilisateur</th>
-          <th>Nom affiché</th>
           <th>Rôle</th>
+          <th>ELO</th>
+          <th>Coach assigné</th>
           <th>Statut</th>
           <th>Dernière connexion</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
+        {% set coaches = users | selectattr('role', 'in', ['admin', 'player']) | list %}
         {% for u in users %}
         <tr>
           <td style="color:var(--text-muted)">#{{ u.id }}</td>
-          <td style="font-weight:600">{{ u.username }}</td>
-          <td>{{ u.display_name or '—' }}</td>
+          <td style="font-weight:600">
+            <a href="/player/{{ u.id }}" style="color:var(--text-primary);text-decoration:none">
+              {{ u.display_name or u.username }}
+            </a>
+          </td>
           <td>
             <span class="badge {% if u.role == 'admin' %}badge-orange{% elif u.role == 'player' %}badge-blue{% else %}badge-gray{% endif %}">
               {{ u.role }}
             </span>
+          </td>
+          <td style="font-weight:600;color:var(--accent-blue)">{{ u.elo_rating | round(0) | int }}</td>
+          <td>
+            <!-- Coach selector -->
+            <select class="coach-select"
+                    data-user-id="{{ u.id }}"
+                    style="background:var(--bg-input,#1e1e2e);color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:3px 6px;font-size:0.8rem;cursor:pointer">
+              <option value="0" {% if not u.coach_id %}selected{% endif %}>— Aucun —</option>
+              {% for c in coaches %}
+                {% if c.id != u.id %}
+                <option value="{{ c.id }}" {% if u.coach_id == c.id %}selected{% endif %}>
+                  {{ c.display_name or c.username }}
+                </option>
+                {% endif %}
+              {% endfor %}
+            </select>
           </td>
           <td>
             {% if u.is_active %}
@@ -49,7 +70,11 @@
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
               {% if u.role != 'admin' %}
               <button class="btn btn-ghost btn-sm" onclick="toggleRole({{ u.id }}, '{{ u.role }}')">
-                {{ 'Rétrograder' if u.role == 'admin' else 'Promouvoir admin' }}
+                Promouvoir admin
+              </button>
+              {% else %}
+              <button class="btn btn-ghost btn-sm" onclick="toggleRole({{ u.id }}, '{{ u.role }}')">
+                Rétrograder
               </button>
               {% endif %}
               <button class="btn btn-sm {% if u.is_active %}btn-danger{% else %}btn-success{% endif %}"
@@ -71,7 +96,28 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', () => { if(window.lucide) lucide.createIcons(); });
+document.addEventListener('DOMContentLoaded', () => {
+  if(window.lucide) lucide.createIcons();
+
+  // Coach selector — save on change
+  document.querySelectorAll('.coach-select').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      const userId = sel.dataset.userId;
+      const coachId = parseInt(sel.value, 10);
+      const r = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ coach_id: coachId }),
+      });
+      if (r.ok) {
+        sel.style.borderColor = '#10b981';
+        setTimeout(() => sel.style.borderColor = '', 1500);
+      } else {
+        sel.style.borderColor = '#f43f5e';
+      }
+    });
+  });
+});
 
 async function toggleRole(id, current) {
   const newRole = current === 'admin' ? 'player' : 'admin';

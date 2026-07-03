@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Politique de confidentialité — TT Tracker{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;margin:0 auto;padding:2rem 1rem">
+  <h1 style="font-size:2rem;font-weight:900;margin-bottom:0.5rem">Politique de confidentialité</h1>
+  <p style="color:var(--text-muted);margin-bottom:2rem">Dernière mise à jour : 28 mars 2026 — Conforme au RGPD</p>
+
+  <div class="card" style="padding:2rem;display:flex;flex-direction:column;gap:1.5rem">
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">1. Responsable du traitement</h2>
+      <p>TT Tracker est responsable du traitement de vos données personnelles. Contact : <strong>privacy@tttracker.com</strong></p>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">2. Données collectées</h2>
+      <p>Nous collectons uniquement les données nécessaires au fonctionnement du Service :</p>
+      <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.4rem;margin-top:0.5rem">
+        <li><strong>Données de compte :</strong> nom d'utilisateur, adresse email, mot de passe (haché).</li>
+        <li><strong>Données de jeu :</strong> sessions, coups (type, force, spin), statistiques agrégées.</li>
+        <li><strong>Données techniques :</strong> adresse IP, logs d'accès, cookies de session.</li>
+        <li><strong>Données de paiement :</strong> traitées directement par Stripe — nous ne stockons pas vos données bancaires.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">3. Finalités du traitement</h2>
+      <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.4rem">
+        <li>Fourniture et amélioration du Service.</li>
+        <li>Gestion des comptes et authentification.</li>
+        <li>Traitement des paiements et gestion des abonnements.</li>
+        <li>Envoi d'emails transactionnels (confirmation, réinitialisation de mot de passe).</li>
+        <li>Sécurité et prévention des abus.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">4. Base légale</h2>
+      <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.4rem">
+        <li><strong>Exécution du contrat</strong> : fourniture du Service que vous avez souscrit.</li>
+        <li><strong>Intérêt légitime</strong> : sécurité, prévention de la fraude, amélioration du Service.</li>
+        <li><strong>Consentement</strong> : communications marketing (si activées).</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">5. Durée de conservation</h2>
+      <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.4rem">
+        <li><strong>Compte actif :</strong> données conservées pendant toute la durée d'activité.</li>
+        <li><strong>Après suppression du compte :</strong> données supprimées sous 30 jours.</li>
+        <li><strong>Données de facturation :</strong> conservées 10 ans (obligation légale).</li>
+        <li><strong>Logs d'accès :</strong> 12 mois maximum.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">6. Partage des données</h2>
+      <p>Vos données ne sont jamais vendues. Elles peuvent être partagées avec :</p>
+      <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.4rem;margin-top:0.5rem">
+        <li><strong>Stripe</strong> : traitement des paiements (politique Stripe applicable).</li>
+        <li><strong>Sentry</strong> : rapports d'erreurs anonymisés (si activé).</li>
+        <li>Autorités légales si requis par la loi.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">7. Vos droits (RGPD)</h2>
+      <p>Conformément au RGPD, vous disposez des droits suivants :</p>
+      <ul style="list-style:disc;padding-left:1.5rem;display:flex;flex-direction:column;gap:0.4rem;margin-top:0.5rem">
+        <li><strong>Accès :</strong> obtenir une copie de vos données.</li>
+        <li><strong>Rectification :</strong> corriger des données inexactes.</li>
+        <li><strong>Effacement :</strong> demander la suppression de vos données.</li>
+        <li><strong>Portabilité :</strong> recevoir vos données dans un format structuré (CSV/JSON).</li>
+        <li><strong>Opposition :</strong> vous opposer à certains traitements.</li>
+      </ul>
+      <p style="margin-top:0.75rem">Pour exercer ces droits : <strong>privacy@tttracker.com</strong></p>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">8. Cookies</h2>
+      <p>Nous utilisons uniquement des cookies techniques nécessaires au fonctionnement du Service (cookie de session JWT). Aucun cookie publicitaire ou de tracking tiers n'est utilisé sans votre consentement.</p>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">9. Sécurité</h2>
+      <p>Vos données sont protégées par : chiffrement HTTPS, mots de passe hachés (bcrypt), tokens JWT à durée limitée, et rate limiting sur les endpoints d'authentification.</p>
+    </section>
+
+    <section>
+      <h2 style="font-size:1.2rem;font-weight:700;margin-bottom:0.75rem">10. Contact et réclamations</h2>
+      <p>En cas de réclamation non résolue, vous pouvez contacter la CNIL : <a href="https://www.cnil.fr" style="color:var(--accent-blue)">www.cnil.fr</a></p>
+    </section>
+
+  </div>
+
+  <div style="margin-top:1.5rem;display:flex;gap:1rem">
+    <a href="/" class="btn btn-ghost">← Accueil</a>
+    <a href="/legal/cgu" class="btn btn-ghost">CGU</a>
+  </div>
+</div>
+{% endblock %}

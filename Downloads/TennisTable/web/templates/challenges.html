@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Défis — TT Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+    <div>
+      <h1 class="page-title">Défis 🏓</h1>
+      <p class="page-subtitle">Défiez vos adversaires — acceptez ou refusez leurs défis</p>
+    </div>
+    <button class="btn btn-primary" @click="$store.tennis.showChallengeModal=true">
+      <i data-lucide="swords" style="width:16px;height:16px"></i>
+      Lancer un défi
+    </button>
+  </div>
+</div>
+
+<div x-data="{
+  received: [], sent: [],
+  async load() {
+    const d = await fetch('/api/challenges',{credentials:'include'}).then(r=>r.json());
+    this.received = d.received || [];
+    this.sent = d.sent || [];
+  },
+  async accept(id) {
+    await fetch('/api/challenges/'+id+'/accept',{method:'POST',credentials:'include'});
+    $store.tennis.notify('Défi accepté — rendez-vous sur /match !','success');
+    this.load();
+  },
+  async decline(id) {
+    await fetch('/api/challenges/'+id+'/decline',{method:'POST',credentials:'include'});
+    $store.tennis.notify('Défi refusé','info');
+    this.load();
+  }
+}" x-init="load()">
+
+  <!-- Received -->
+  <div class="card animate-in" style="margin-bottom:1.25rem">
+    <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+      <i data-lucide="inbox" style="width:16px;height:16px;color:var(--accent-orange)"></i>
+      Défis reçus
+      <span x-show="received.length>0" x-text="received.length"
+            style="background:#f43f5e;color:#fff;border-radius:10px;padding:1px 7px;font-size:0.72rem;font-weight:700"></span>
+    </div>
+    <template x-if="received.length===0">
+      <div class="empty-state" style="padding:1.5rem 0">
+        <span style="font-size:1.8rem">🛡️</span>
+        <span style="color:var(--text-muted)">Aucun défi reçu</span>
+      </div>
+    </template>
+    <template x-for="c in received" :key="c.id">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;padding:0.875rem;background:rgba(244,63,94,0.06);border:1px solid rgba(244,63,94,0.2);border-radius:10px;margin-bottom:0.75rem">
+        <div>
+          <div style="font-weight:700" x-text="c.other_name"></div>
+          <div style="font-size:0.8rem;color:var(--text-muted)">
+            ELO <span x-text="c.other_elo" style="color:var(--accent-blue);font-weight:600"></span>
+            · <span x-text="c.created_at"></span>
+          </div>
+          <div x-show="c.message" style="font-size:0.82rem;margin-top:4px;color:var(--text-muted);font-style:italic" x-text="'« ' + c.message + ' »'"></div>
+        </div>
+        <div style="display:flex;gap:0.5rem">
+          <button class="btn btn-primary btn-sm" @click="accept(c.id)">
+            <i data-lucide="check" style="width:13px;height:13px"></i> Accepter
+          </button>
+          <button class="btn btn-ghost btn-sm" @click="decline(c.id)">
+            <i data-lucide="x" style="width:13px;height:13px"></i> Refuser
+          </button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Sent -->
+  <div class="card animate-in">
+    <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
+      <i data-lucide="send" style="width:16px;height:16px;color:var(--accent-blue)"></i>
+      Défis envoyés
+    </div>
+    <template x-if="sent.length===0">
+      <div class="empty-state" style="padding:1.5rem 0">
+        <span style="font-size:1.8rem">🗡️</span>
+        <span style="color:var(--text-muted)">Aucun défi envoyé récemment</span>
+      </div>
+    </template>
+    <template x-for="c in sent" :key="c.id">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;padding:0.75rem;border-bottom:1px solid rgba(255,255,255,0.05)">
+        <div>
+          <span style="font-weight:600" x-text="c.other_name"></span>
+          <span style="font-size:0.75rem;color:var(--text-muted);margin-left:8px" x-text="c.created_at"></span>
+        </div>
+        <span class="badge"
+          :class="c.status==='pending'?'badge-orange':c.status==='accepted'?'badge-green':c.status==='declined'?'badge-red':'badge-gray'"
+          x-text="c.status"></span>
+      </div>
+    </template>
+  </div>
+</div>
+
+<!-- Send challenge modal -->
+<div x-data="{ show: false, players: [], pid: '', msg: '', sending: false }"
+     x-init="$watch('$store.tennis.showChallengeModal', v=>{ if(v){ show=true; $store.tennis.showChallengeModal=false; fetch('/api/users/list',{credentials:'include'}).then(r=>r.json()).then(d=>players=d); } })"
+     x-show="show" x-cloak
+     style="position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6)">
+  <div class="card" style="width:min(420px,90vw);max-height:90vh;overflow-y:auto" @click.stop>
+    <div style="font-weight:700;font-size:1.1rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:8px">
+      <i data-lucide="swords" style="width:18px;height:18px;color:var(--accent-orange)"></i>
+      Envoyer un défi
+    </div>
+    <div style="margin-bottom:1rem">
+      <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px">Adversaire</label>
+      <select x-model="pid" style="width:100%;background:var(--bg-input,#1e1e2e);color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;font-size:0.9rem">
+        <option value="">— Choisir un joueur —</option>
+        <template x-for="p in players" :key="p.id">
+          <option :value="p.id" x-text="p.display_name"></option>
+        </template>
+      </select>
+    </div>
+    <div style="margin-bottom:1.25rem">
+      <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:4px">Message (optionnel)</label>
+      <input type="text" x-model="msg" maxlength="255" placeholder="Prêt à perdre ?"
+             style="width:100%;background:var(--bg-input,#1e1e2e);color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;font-size:0.9rem">
+    </div>
+    <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+      <button class="btn btn-ghost" @click="show=false">Annuler</button>
+      <button class="btn btn-primary" :disabled="!pid||sending"
+        @click="sending=true; fetch('/api/challenges',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({challenged_id:parseInt(pid),message:msg})})
+          .then(r=>r.ok?r.json():r.json().then(e=>{throw e}))
+          .then(()=>{ $store.tennis.notify('Défi envoyé !','success'); show=false; sending=false; })
+          .catch(e=>{ $store.tennis.notify(e.detail||'Erreur','error'); sending=false; })">
+        <span x-text="sending ? 'Envoi…' : 'Envoyer le défi'"></span>
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if(window.lucide) lucide.createIcons();
+  if (!Alpine.store('tennis').hasOwnProperty('showChallengeModal')) {
+    Alpine.store('tennis').showChallengeModal = false;
+  }
+});
+</script>
+{% endblock %}

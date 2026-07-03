@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tarifs — TT Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/app.css?v=3">
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; max-width: 700px; margin: 0 auto; }
+    .pricing-card { border-radius: 16px; padding: 2rem; border: 1px solid var(--border); background: var(--bg-card); position: relative; }
+    .pricing-card.featured { border-color: var(--accent-blue); box-shadow: 0 0 0 1px var(--accent-blue), 0 8px 32px rgba(99,102,241,0.2); }
+    .pricing-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--accent-blue); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 4px 16px; border-radius: 99px; white-space: nowrap; }
+    .pricing-feature { display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.6rem; font-size: 0.9rem; }
+    .check { color: #10b981; font-size: 1rem; flex-shrink: 0; }
+  </style>
+</head>
+<body x-data="{
+  loading: false,
+  error: '',
+  async checkout() {
+    this.error = ''; this.loading = true;
+    try {
+      const r = await fetch('/api/stripe/checkout', {method: 'POST', headers: {'Content-Type': 'application/json'}});
+      if (r.status === 401) { location.href = '/login?next=/pricing'; return; }
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({}));
+        this.error = e.detail || 'Erreur lors de la création du paiement';
+        return;
+      }
+      const data = await r.json();
+      location.href = data.checkout_url;
+    } catch(e) { this.error = 'Erreur réseau — vérifiez votre connexion'; }
+    finally { this.loading = false; }
+  }
+}">
+
+<!-- Nav -->
+<nav class="landing-nav">
+  <div style="display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.1rem">
+    <a href="/" style="color:inherit;text-decoration:none;display:flex;align-items:center;gap:8px">
+      <span style="font-size:1.4rem">🏓</span> TT Tracker
+    </a>
+  </div>
+  <div style="display:flex;gap:0.75rem">
+    {% if user %}
+    <a href="/dashboard" class="btn btn-ghost">Dashboard</a>
+    {% else %}
+    <a href="/login" class="btn btn-ghost">Se connecter</a>
+    <a href="/login" class="btn btn-primary">Créer un compte</a>
+    {% endif %}
+  </div>
+</nav>
+
+<section style="padding:4rem 2rem">
+  <div style="text-align:center;margin-bottom:3rem">
+    <h1 style="font-size:2.5rem;font-weight:900;letter-spacing:-0.03em">Choisissez votre plan</h1>
+    <p style="color:var(--text-muted);font-size:1rem;margin-top:0.75rem">Démarrez gratuitement, passez à Club quand vous êtes prêt.</p>
+  </div>
+
+  <div class="pricing-grid">
+
+    <!-- Free -->
+    <div class="pricing-card">
+      <h2 style="font-size:1.3rem;font-weight:900;margin-bottom:0.25rem">Free</h2>
+      <div style="font-size:2.5rem;font-weight:900;margin:0.75rem 0">0 €<span style="font-size:1rem;font-weight:400;color:var(--text-muted)">/mois</span></div>
+      <div style="margin:1.5rem 0">
+        <div class="pricing-feature"><span class="check">✓</span> 1 raquette connectée</div>
+        <div class="pricing-feature"><span class="check">✓</span> 30 jours d'historique</div>
+        <div class="pricing-feature"><span class="check">✓</span> Export CSV</div>
+        <div class="pricing-feature"><span class="check">✓</span> 1 tournoi simultané</div>
+        <div class="pricing-feature"><span style="color:var(--text-muted)">✗</span> <span style="color:var(--text-muted)">Historique complet</span></div>
+        <div class="pricing-feature"><span style="color:var(--text-muted)">✗</span> <span style="color:var(--text-muted)">Export PDF</span></div>
+        <div class="pricing-feature"><span style="color:var(--text-muted)">✗</span> <span style="color:var(--text-muted)">Tournois illimités</span></div>
+        <div class="pricing-feature"><span style="color:var(--text-muted)">✗</span> <span style="color:var(--text-muted)">Support prioritaire</span></div>
+      </div>
+      {% if user and user.subscription_tier == 'free' %}
+      <div class="btn" style="width:100%;justify-content:center;background:rgba(255,255,255,0.08);cursor:default">Plan actuel</div>
+      {% else %}
+      <a href="/login" class="btn" style="width:100%;justify-content:center;background:rgba(255,255,255,0.08)">Commencer gratuitement</a>
+      {% endif %}
+    </div>
+
+    <!-- Club -->
+    <div class="pricing-card featured">
+      <div class="pricing-badge">⭐ Recommandé</div>
+      <h2 style="font-size:1.3rem;font-weight:900;margin-bottom:0.25rem">Club</h2>
+      <div style="font-size:2.5rem;font-weight:900;margin:0.75rem 0">15 €<span style="font-size:1rem;font-weight:400;color:var(--text-muted)">/mois</span></div>
+      <div style="margin:1.5rem 0">
+        <div class="pricing-feature"><span class="check">✓</span> Raquettes illimitées</div>
+        <div class="pricing-feature"><span class="check">✓</span> Historique complet</div>
+        <div class="pricing-feature"><span class="check">✓</span> Export CSV + PDF</div>
+        <div class="pricing-feature"><span class="check">✓</span> Tournois illimités</div>
+        <div class="pricing-feature"><span class="check">✓</span> Support prioritaire</div>
+        <div class="pricing-feature"><span class="check">✓</span> Statistiques avancées</div>
+        <div class="pricing-feature"><span class="check">✓</span> Accès anticipé nouvelles fonctions</div>
+      </div>
+      {% if user and user.subscription_tier == 'club' %}
+      <div class="btn btn-primary" style="width:100%;justify-content:center;cursor:default">
+        ✅ Plan actif
+      </div>
+      {% else %}
+      <button class="btn btn-primary" style="width:100%;justify-content:center" @click="checkout" :disabled="loading">
+        <span x-text="loading ? 'Redirection...' : 'Passer à Club →'"></span>
+      </button>
+      <div x-show="error" x-text="error"
+           style="color:#f87171;font-size:0.82rem;margin-top:0.6rem;text-align:center;line-height:1.4"></div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <p style="text-align:center;color:var(--text-muted);font-size:0.85rem;margin-top:2rem">
+    Paiement sécurisé par Stripe · Résiliation à tout moment ·
+    <a href="/legal/cgu" style="color:var(--text-muted)">CGU</a>
+  </p>
+</section>
+
+<footer style="text-align:center;padding:2rem;color:var(--text-muted);font-size:0.85rem;border-top:1px solid var(--border)">
+  🏓 TT Tracker &copy; 2026 &nbsp;·&nbsp;
+  <a href="/legal/cgu" style="color:var(--text-muted)">CGU</a> &nbsp;·&nbsp;
+  <a href="/legal/privacy" style="color:var(--text-muted)">Confidentialité</a>
+</footer>
+
+<script>document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)lucide.createIcons()});</script>
+</body>
+</html>

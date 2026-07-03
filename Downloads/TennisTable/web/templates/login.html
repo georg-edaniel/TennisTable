@@ -6,13 +6,13 @@
   <title>Connexion — TT Tracker</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/app.css?v=3">
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
 <div class="login-bg" x-data="{
-  tab: 'login',
+  tab: '{{ initial_tab|default("login") }}',
   username: '', email: '', password: '', displayName: '',
   error: '', loading: false,
 
@@ -39,14 +39,20 @@
         body: JSON.stringify({username: this.username, email: this.email, password: this.password, display_name: this.displayName})
       });
       if (!r.ok) { const e = await r.json(); this.error = e.detail || 'Erreur'; return; }
-      this.tab = 'login'; this.error = ''; alert('Compte créé — connectez-vous');
+      // Auto-login after registration
+      const lr = await fetch('/auth/login', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({username: this.username, password: this.password})
+      });
+      if (lr.ok) { location.href = '/dashboard'; return; }
+      this.tab = 'login'; this.error = 'Compte créé — connectez-vous !';
     } catch(e) { this.error = 'Erreur lors de la création'; }
     finally { this.loading = false; }
   },
 
   async doGuest() {
     await fetch('/auth/guest', {method: 'POST'});
-    location.href = '/dashboard';
+    location.href = '/demo';
   }
 }">
   <div class="login-card animate-in">
@@ -109,6 +115,13 @@
       </button>
     </div>
 
+    <!-- Forgot password link (login tab only) -->
+    <div x-show="tab==='login'" style="margin-top:0.5rem;text-align:right">
+      <a href="/forgot-password" style="color:var(--text-muted);font-size:0.8rem;text-decoration:underline">
+        Mot de passe oublié ?
+      </a>
+    </div>
+
     <!-- Guest -->
     <div style="margin-top:1rem;text-align:center">
       <button @click="doGuest" style="background:none;border:none;color:var(--text-muted);font-size:0.8rem;cursor:pointer;text-decoration:underline">
@@ -116,6 +129,20 @@
       </button>
     </div>
   </div>
+</div>
+
+<!-- Cookie consent banner -->
+<div x-data="{ show: !localStorage.getItem('tt_cookie_consent') }"
+     x-show="show"
+     style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1e1e2e;border-top:1px solid rgba(255,255,255,0.1);padding:0.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+  <p style="margin:0;font-size:0.8rem;color:#888">
+    🍪 Ce site utilise des cookies essentiels.
+    <a href="/legal/privacy" style="color:#6366f1">En savoir plus</a>
+  </p>
+  <button class="btn btn-primary btn-sm"
+          @click="localStorage.setItem('tt_cookie_consent','1'); show = false">
+    Accepter
+  </button>
 </div>
 <script>document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)lucide.createIcons()});</script>
 </body>

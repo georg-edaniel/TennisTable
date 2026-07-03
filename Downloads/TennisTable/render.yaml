@@ -2,7 +2,7 @@ services:
   - type: web
     name: tt-tracker-api
     runtime: docker
-    rootDir: TennisTable
+    rootDir: Downloads/TennisTable
     dockerfilePath: ./Dockerfile
     plan: free
     healthCheckPath: /health

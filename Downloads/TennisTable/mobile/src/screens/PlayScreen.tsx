@@ -5,6 +5,8 @@ import {
   TouchableOpacity, Vibration, View,
 } from 'react-native';
 import { BleManager, Device, Subscription } from 'react-native-ble-plx';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const isWeb = typeof navigator !== 'undefined' && navigator.product !== 'ReactNative';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -43,7 +45,7 @@ function decodeByte(b64: string): number {
   const C = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   return ((C.indexOf(b64[0]) << 2) | (C.indexOf(b64[1]) >> 4)) & 0xff;
 }
-const ble = new BleManager();
+const ble = isWeb ? null as unknown as BleManager : new BleManager();
 
 async function requestBlePermissions(): Promise<boolean> {
   if (Platform.OS !== 'android') return true;

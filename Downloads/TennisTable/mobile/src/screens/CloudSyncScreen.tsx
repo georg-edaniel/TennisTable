@@ -16,7 +16,7 @@ const ACCENT = '#6366f1';
 const LAST_SYNC_KEY = '@tt_last_sync';
 
 export default function CloudSyncScreen() {
-  const [apiUrl, setApiUrlState] = useState('http://localhost:8000');
+  const [apiUrl, setApiUrlState] = useState('https://tennistable.onrender.com');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

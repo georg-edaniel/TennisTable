@@ -5,7 +5,7 @@ const TOKEN_KEY = '@tt_access_token';
 const REFRESH_KEY = '@tt_refresh_token';
 
 export async function getApiUrl(): Promise<string> {
-  return (await AsyncStorage.getItem(API_URL_KEY)) ?? 'http://localhost:8000';
+  return (await AsyncStorage.getItem(API_URL_KEY)) ?? 'https://tennistable.onrender.com';
 }
 
 export async function setApiUrl(url: string): Promise<void> {

@@ -27,12 +27,12 @@ async function refreshAccessToken(): Promise<boolean> {
     if (!refresh) return false;
     const res = await fetch(`${base}/auth/refresh`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${refresh}` },
       body: JSON.stringify({ refresh_token: refresh }),
     });
     if (!res.ok) return false;
     const data = await res.json();
-    await setTokens(data.access_token, data.refresh_token ?? refresh);
+    await setTokens(data.access_token, refresh);
     return true;
   } catch {
     return false;
@@ -67,8 +67,8 @@ export async function login(username: string, password: string): Promise<{ ok: b
     const base = await getApiUrl();
     const res = await fetch(`${base}/auth/login`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -82,11 +82,17 @@ export async function login(username: string, password: string): Promise<{ ok: b
   }
 }
 
-export async function register(username: string, password: string): Promise<{ ok: boolean; error?: string }> {
+export async function register(
+  username: string,
+  password: string,
+  email: string,
+): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await apiFetch('/auth/register', {
+    const base = await getApiUrl();
+    const res = await fetch(`${base}/auth/register`, {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, email }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -118,7 +124,7 @@ export async function testConnection(): Promise<boolean> {
 
 export async function syncMatch(matchData: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
   try {
-    const res = await apiFetch('/sessions/', {
+    const res = await apiFetch('/api/sessions/manual-match', {
       method: 'POST',
       body: JSON.stringify(matchData),
     });
@@ -130,7 +136,7 @@ export async function syncMatch(matchData: Record<string, unknown>): Promise<{ o
 
 export async function getLeaderboard(): Promise<unknown[]> {
   try {
-    const res = await apiFetch('/leaderboard/');
+    const res = await apiFetch('/api/leaderboard');
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data) ? data : (data.items ?? []);
@@ -141,7 +147,7 @@ export async function getLeaderboard(): Promise<unknown[]> {
 
 export async function getAiRecommendations(playerId: string): Promise<string[]> {
   try {
-    const res = await apiFetch(`/analysis/recommendations/${playerId}`);
+    const res = await apiFetch(`/api/analysis/training-vs-match/${playerId}`);
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data.tips) ? data.tips : [];

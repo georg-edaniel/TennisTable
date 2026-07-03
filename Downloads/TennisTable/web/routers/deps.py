@@ -11,7 +11,12 @@ ACCESS_COOKIE = "access_token"
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
+    # Support both cookie-based (web) and Bearer header (mobile)
     token = request.cookies.get(ACCESS_COOKIE)
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
     if not token:
         raise HTTPException(status_code=401, detail="Non authentifié")
     try:

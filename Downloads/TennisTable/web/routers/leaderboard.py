@@ -1,18 +1,14 @@
 """Leaderboard routes: HTML page + JSON API."""
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from web.core.database import get_db
 from web.core.security import decode_token
+from web.core.templating import templates
+from web.models.elo_history import EloHistory
 from web.models.user import User
 from web.services.auth_service import get_user_by_id
-
-TEMPLATES_DIR = Path(__file__).resolve().parents[1] / "templates"
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 router = APIRouter(tags=["leaderboard"])
 api_router = APIRouter(tags=["leaderboard-api"])
@@ -22,6 +18,11 @@ ACCESS_COOKIE = "access_token"
 
 def _get_user(request: Request, db: Session) -> User | None:
     token = request.cookies.get(ACCESS_COOKIE)
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
     if not token:
         return None
     try:
@@ -93,3 +94,25 @@ def leaderboard_api(request: Request, db: Session = Depends(get_db)):
             "elo_last_change": round(p.elo_last_change, 1),
         })
     return result
+
+
+@api_router.get("/elo-history/{player_id}")
+def elo_history(player_id: int, request: Request, db: Session = Depends(get_db)):
+    user = _get_user(request, db)
+    if not user:
+        return JSONResponse({"detail": "Not authenticated"}, status_code=401)
+
+    rows = (
+        db.query(EloHistory)
+        .filter(EloHistory.user_id == player_id)
+        .order_by(EloHistory.recorded_at.asc())
+        .all()
+    )
+    return [
+        {
+            "date": r.recorded_at.strftime("%Y-%m-%d"),
+            "elo": round(r.elo_after, 1),
+            "delta": round(r.delta, 1),
+        }
+        for r in rows
+    ]

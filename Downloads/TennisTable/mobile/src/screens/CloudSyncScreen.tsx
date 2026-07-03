@@ -18,7 +18,9 @@ const LAST_SYNC_KEY = '@tt_last_sync';
 export default function CloudSyncScreen() {
   const [apiUrl, setApiUrlState] = useState('http://localhost:8000');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -65,17 +67,18 @@ export default function CloudSyncScreen() {
   }
 
   async function handleRegister() {
-    if (!username.trim() || !password.trim()) {
-      Alert.alert('Champs requis', 'Saisis un nom d\'utilisateur et un mot de passe.');
+    if (!username.trim() || !password.trim() || !email.trim()) {
+      Alert.alert('Champs requis', 'Saisis un nom d\'utilisateur, un email et un mot de passe.');
       return;
     }
     setLoading(true);
     await setApiUrl(apiUrl);
-    const { ok, error } = await register(username.trim(), password.trim());
+    const { ok, error } = await register(username.trim(), password.trim(), email.trim());
     setLoading(false);
     if (ok) {
       setLoggedIn(true);
       setPassword('');
+      setIsRegistering(false);
     } else {
       Alert.alert('Inscription échouée', error ?? 'Essaie un autre nom d\'utilisateur');
     }
@@ -99,13 +102,11 @@ export default function CloudSyncScreen() {
       let ok = 0, fail = 0;
       for (const m of matches) {
         const res = await syncMatch({
-          player1: m.player1,
-          player2: m.player2,
-          score1: m.score1,
-          score2: m.score2,
-          winner: m.winner,
-          duration_secs: m.durationSecs,
-          date: m.date,
+          opponent_name: m.player2 || 'Adversaire',
+          p1_sets: m.score1 ?? 0,
+          p2_sets: m.score2 ?? 0,
+          notes: `vs ${m.player2} | ${m.durationSecs}s | win: ${m.winner === 0 ? m.player1 : m.player2}`,
+          played_at: m.date,
         });
         if (res.ok) ok++;
         else fail++;
@@ -183,7 +184,7 @@ export default function CloudSyncScreen() {
         <View style={s.card}>
           <View style={s.cardHeader}>
             <Ionicons name="lock-closed-outline" size={14} color={ACCENT} />
-            <Text style={s.cardTitle}>CONNEXION</Text>
+            <Text style={s.cardTitle}>{isRegistering ? 'CRÉER UN COMPTE' : 'CONNEXION'}</Text>
           </View>
           <TextInput
             style={s.input}
@@ -194,23 +195,47 @@ export default function CloudSyncScreen() {
             autoCapitalize="none"
             autoCorrect={false}
           />
+          {isRegistering && (
+            <TextInput
+              style={s.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Email"
+              placeholderTextColor="#475569"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+            />
+          )}
           <TextInput
             style={s.input}
             value={password}
             onChangeText={setPassword}
-            placeholder="Mot de passe"
+            placeholder="Mot de passe (8+ car., lettre + chiffre)"
             placeholderTextColor="#475569"
             secureTextEntry
           />
-          <View style={s.authRow}>
-            <TouchableOpacity style={[s.authBtn, { backgroundColor: ACCENT }]} onPress={handleLogin} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={s.authBtnTxt}>Se connecter</Text>}
-            </TouchableOpacity>
-            <TouchableOpacity style={[s.authBtn, s.authBtnSecondary]} onPress={handleRegister} disabled={loading}>
-              <Text style={[s.authBtnTxt, { color: ACCENT }]}>Créer un compte</Text>
-            </TouchableOpacity>
-          </View>
+          {isRegistering ? (
+            <View style={s.authRow}>
+              <TouchableOpacity style={[s.authBtn, { backgroundColor: ACCENT }]} onPress={handleRegister} disabled={loading}>
+                {loading ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={s.authBtnTxt}>Créer le compte</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.authBtn, s.authBtnSecondary]} onPress={() => setIsRegistering(false)} disabled={loading}>
+                <Text style={[s.authBtnTxt, { color: ACCENT }]}>Annuler</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={s.authRow}>
+              <TouchableOpacity style={[s.authBtn, { backgroundColor: ACCENT }]} onPress={handleLogin} disabled={loading}>
+                {loading ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={s.authBtnTxt}>Se connecter</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.authBtn, s.authBtnSecondary]} onPress={() => setIsRegistering(true)} disabled={loading}>
+                <Text style={[s.authBtnTxt, { color: ACCENT }]}>Créer un compte</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
 

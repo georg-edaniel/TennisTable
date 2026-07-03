@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: tt-tracker-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///./tennis.db
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: SECRET_KEY
+        generateValue: true

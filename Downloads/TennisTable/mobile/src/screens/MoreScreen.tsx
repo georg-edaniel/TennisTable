@@ -24,6 +24,7 @@ const ITEMS: {
   { name: 'Training',     label: 'Drills',     icon: 'fitness',       color: '#10b981', gradient: ['#10b98122', '#10b98106'] },
   { name: 'Settings',     label: 'Réglages',   icon: 'settings-sharp',color: '#64748b', gradient: ['#64748b22', '#64748b06'] },
   { name: 'CloudSync',    label: 'Cloud Sync', icon: 'cloud-upload',  color: '#0ea5e9', gradient: ['#0ea5e922', '#0ea5e906'] },
+  { name: 'H2H',         label: 'Face à Face',icon: 'swap-horizontal',color: '#ec4899', gradient: ['#ec489922', '#ec489906'] },
 ];
 
 export default function MoreScreen() {
@@ -39,6 +40,8 @@ export default function MoreScreen() {
             style={s.cardWrap}
             activeOpacity={0.75}
             onPress={() => nav.navigate(item.name)}
+            accessibilityLabel={item.label}
+            accessibilityRole="button"
           >
             <LinearGradient
               colors={item.gradient}

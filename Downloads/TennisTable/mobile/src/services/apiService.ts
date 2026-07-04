@@ -122,16 +122,85 @@ export async function testConnection(): Promise<boolean> {
   }
 }
 
-export async function syncMatch(matchData: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
+const SYNC_QUEUE_KEY = '@tt_sync_queue';
+
+export async function getSyncQueue(): Promise<Record<string, unknown>[]> {
   try {
-    const res = await apiFetch('/api/sessions/manual-match', {
-      method: 'POST',
-      body: JSON.stringify(matchData),
-    });
-    return { ok: res.ok, error: res.ok ? undefined : 'Sync échouée' };
-  } catch (e: any) {
-    return { ok: false, error: e.message };
+    const raw = await AsyncStorage.getItem(SYNC_QUEUE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
   }
+}
+
+async function addToSyncQueue(matchData: Record<string, unknown>): Promise<void> {
+  const queue = await getSyncQueue();
+  queue.push(matchData);
+  await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+}
+
+async function removeFromSyncQueue(index: number): Promise<void> {
+  const queue = await getSyncQueue();
+  queue.splice(index, 1);
+  await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+export async function syncMatch(matchData: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> {
+  const MAX_RETRIES = 3;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const res = await apiFetch('/api/sessions/manual-match', {
+        method: 'POST',
+        body: JSON.stringify(matchData),
+      });
+      if (res.ok) return { ok: true };
+      if (res.status >= 400 && res.status < 500) {
+        // Client error — don't retry, queue for manual review
+        break;
+      }
+    } catch {
+      // Network error — retry with backoff
+    }
+    if (attempt < MAX_RETRIES - 1) await sleep(1000 * (attempt + 1));
+  }
+  // Queue for later retry
+  await addToSyncQueue(matchData);
+  return { ok: false, error: 'Sync échouée — ajouté à la file d\'attente' };
+}
+
+/** Retry all queued matches. Returns { success, failed } counts. */
+export async function flushSyncQueue(): Promise<{ success: number; failed: number }> {
+  const queue = await getSyncQueue();
+  if (queue.length === 0) return { success: 0, failed: 0 };
+
+  let success = 0;
+  let failed = 0;
+  const remaining: Record<string, unknown>[] = [];
+
+  for (const item of queue) {
+    try {
+      const res = await apiFetch('/api/sessions/manual-match', {
+        method: 'POST',
+        body: JSON.stringify(item),
+      });
+      if (res.ok) {
+        success++;
+      } else {
+        failed++;
+        remaining.push(item);
+      }
+    } catch {
+      failed++;
+      remaining.push(item);
+    }
+  }
+
+  await AsyncStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(remaining));
+  return { success, failed };
 }
 
 export async function getLeaderboard(): Promise<unknown[]> {

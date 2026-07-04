@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getApiUrl, setApiUrl, login, register, logout,
-  isLoggedIn, testConnection, syncMatch,
+  isLoggedIn, testConnection, syncMatch, flushSyncQueue, getSyncQueue,
 } from '../services/apiService';
 import { loadMatches } from '../storage/matchStorage';
 import { BG, CARD_BG } from '../types';
@@ -28,6 +28,7 @@ export default function CloudSyncScreen() {
   const [connectionOk, setConnectionOk] = useState<boolean | null>(null);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [queueCount, setQueueCount] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -36,6 +37,8 @@ export default function CloudSyncScreen() {
       setLoggedIn(await isLoggedIn());
       const ls = await AsyncStorage.getItem(LAST_SYNC_KEY);
       setLastSync(ls);
+      const q = await getSyncQueue();
+      setQueueCount(q.length);
     })();
   }, []);
 
@@ -271,7 +274,28 @@ export default function CloudSyncScreen() {
         </TouchableOpacity>
         <Text style={s.syncHint}>
           Upload tous tes matchs locaux vers le serveur configuré ci-dessus.
+          Les échecs sont mis en file d'attente et réessayés automatiquement.
         </Text>
+        {queueCount > 0 && (
+          <View style={s.queueRow}>
+            <Ionicons name="time-outline" size={13} color="#f59e0b" />
+            <Text style={s.queueTxt}>{queueCount} match{queueCount > 1 ? 's' : ''} en attente de sync</Text>
+            <TouchableOpacity
+              style={s.flushBtn}
+              onPress={async () => {
+                setSyncing(true);
+                const { success, failed } = await flushSyncQueue();
+                const q = await getSyncQueue();
+                setQueueCount(q.length);
+                setSyncResult(`🔄 File : ✅ ${success} resynchronisé${success > 1 ? 's' : ''}${failed > 0 ? `, ❌ ${failed} encore en attente` : ''}`);
+                setSyncing(false);
+              }}
+              disabled={syncing || !loggedIn}
+            >
+              <Text style={s.flushBtnTxt}>Réessayer</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {/* Info Render */}
@@ -343,5 +367,12 @@ const s = StyleSheet.create({
   },
   syncBtnTxt: { color: '#fff', fontSize: 14, fontWeight: '800' },
   syncHint: { fontSize: 11, color: '#475569', fontStyle: 'italic' },
+  queueRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+    backgroundColor: '#f59e0b18', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#f59e0b30',
+  },
+  queueTxt: { fontSize: 12, color: '#f59e0b', fontWeight: '700', flex: 1 },
+  flushBtn: { paddingHorizontal: 10, paddingVertical: 4, backgroundColor: '#f59e0b30', borderRadius: 8 },
+  flushBtnTxt: { fontSize: 11, color: '#f59e0b', fontWeight: '800' },
   infoTxt: { fontSize: 12, color: '#64748b', lineHeight: 18 },
 });

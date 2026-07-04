@@ -18,6 +18,7 @@ import ClubScreen             from '../screens/ClubScreen';
 import ChampionsScreen        from '../screens/ChampionsScreen';
 import RefereeScreen          from '../screens/RefereeScreen';
 import CloudSyncScreen        from '../screens/CloudSyncScreen';
+import H2HScreen              from '../screens/H2HScreen';
 import { ACCENT, CARD_BG } from '../types';
 
 export type TabParams = {
@@ -36,6 +37,7 @@ export type TabParams = {
   Champions:  undefined;
   Settings:   undefined;
   CloudSync:  undefined;
+  H2H:        undefined;
 };
 
 export type RootStackParams = {
@@ -60,7 +62,7 @@ function TabButton({ children, onPress, accessibilityState }: any) {
   };
 
   return (
-    <TouchableOpacity style={s.tabBtn} onPress={handlePress} activeOpacity={1}>
+    <TouchableOpacity style={s.tabBtn} onPress={handlePress} activeOpacity={1} accessibilityRole="tab">
       <Animated.View style={[s.tabInner, active && s.tabInnerActive, { transform: [{ scale }] }]}>
         {children}
       </Animated.View>
@@ -92,9 +94,10 @@ const SCREEN_MAP: Record<string, React.ComponentType<any>> = {
   Champions: ChampionsScreen,
   Settings:  SettingsScreen,
   CloudSync: CloudSyncScreen,
+  H2H:       H2HScreen,
 };
 
-const HIDDEN: Array<keyof TabParams> = ['Referee', 'Tournament', 'Training', 'EloChart', 'Club', 'Champions', 'Settings', 'CloudSync'];
+const HIDDEN: Array<keyof TabParams> = ['Referee', 'Tournament', 'Training', 'EloChart', 'Club', 'Champions', 'Settings', 'CloudSync', 'H2H'];
 
 function Tabs() {
   return (

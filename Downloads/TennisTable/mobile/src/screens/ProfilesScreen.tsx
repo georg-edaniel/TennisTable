@@ -1,9 +1,10 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Alert, FlatList, Image, Modal, ScrollView, StyleSheet, Text, TextInput,
   TouchableOpacity, View,
 } from 'react-native';
 import StatShareCard from '../components/StatShareCard';
+import BadgeCelebrationModal from '../components/BadgeCelebrationModal';
 import { useFocusEffect } from '@react-navigation/native';
 import EmptyState from '../components/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,6 +37,9 @@ export default function ProfilesScreen() {
   const [goalEloInput, setGoalEloInput] = useState('');
   const [goalMatchesInput, setGoalMatchesInput] = useState('');
   const [shareProfile, setShareProfile] = useState<PlayerProfile | null>(null);
+  const [newBadges, setNewBadges] = useState<BadgeDef[]>([]);
+  const [showBadgeCelebration, setShowBadgeCelebration] = useState(false);
+  const profilesRef = useRef<PlayerProfile[]>([]);
   const navigation = useNavigation<any>();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
@@ -66,7 +70,23 @@ export default function ProfilesScreen() {
   }
 
   useFocusEffect(useCallback(() => {
-    loadProfiles().then(p => setProfiles([...p].sort((a, b) => b.elo - a.elo)));
+    const oldBadgeMap = new Map(profilesRef.current.map(p => [p.id, getEarnedBadges(p).map(b => b.id)]));
+    const wasLoaded = profilesRef.current.length > 0;
+
+    loadProfiles().then(fresh => {
+      const sorted = [...fresh].sort((a, b) => b.elo - a.elo);
+      profilesRef.current = sorted;
+      setProfiles(sorted);
+
+      if (wasLoaded) {
+        const earned: BadgeDef[] = [];
+        for (const fp of fresh) {
+          const oldIds = oldBadgeMap.get(fp.id) ?? [];
+          getEarnedBadges(fp).forEach(b => { if (!oldIds.includes(b.id)) earned.push(b); });
+        }
+        if (earned.length > 0) { setNewBadges(earned); setShowBadgeCelebration(true); }
+      }
+    });
     loadGoals().then(setGoals);
   }, []));
 
@@ -414,6 +434,14 @@ export default function ProfilesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Badge Celebration */}
+      {showBadgeCelebration && newBadges.length > 0 && (
+        <BadgeCelebrationModal
+          badges={newBadges}
+          onClose={() => { setShowBadgeCelebration(false); setNewBadges([]); }}
+        />
+      )}
 
       {/* Share Stats modal */}
       {shareProfile && (

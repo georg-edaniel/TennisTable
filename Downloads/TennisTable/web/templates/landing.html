@@ -1,6 +1,12 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="light">
 <head>
+<script>
+  (function() {
+    var th = localStorage.getItem('tt_theme') || 'light';
+    document.documentElement.setAttribute('data-theme', th);
+  })();
+</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TT Tracker — Analysez chaque coup, progressez plus vite</title>
@@ -10,7 +16,7 @@
   <meta property="og:type" content="website">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/app.css?v=4">
+  <link rel="stylesheet" href="/static/css/app.css?v=5">
   <!-- PWA -->
   <link rel="manifest" href="/static/manifest.json">
   <meta name="theme-color" content="#6366f1">
@@ -33,7 +39,7 @@
       100% { background-position: 0% 50%; }
     }
     .animated-gradient {
-      background: linear-gradient(-45deg, #6366f1, #a855f7, #10b981, #6366f1);
+      background: linear-gradient(-45deg, #6366f1, #a855f7, #22c55e, #6366f1);
       background-size: 300% 300%;
       animation: gradientAnim 6s ease infinite;
       -webkit-background-clip: text;
@@ -43,25 +49,39 @@
     .gradient-border {
       border: 1px solid transparent;
       background: linear-gradient(var(--bg-card), var(--bg-card)) padding-box,
-                  linear-gradient(135deg, rgba(99,102,241,0.4), rgba(168,85,247,0.4)) border-box;
+                  linear-gradient(135deg, rgba(99,102,241,0.35), rgba(168,85,247,0.35)) border-box;
     }
     .stars { color: #f59e0b; letter-spacing: 1px; }
+    .landing-section { padding: 5rem 2rem; }
     @media (max-width: 600px) {
       section { padding: 3rem 1.25rem; }
       .landing-hero { padding: 6rem 1.25rem 3rem; }
       .landing-nav { padding: 0.7rem 1rem; }
       .nav-secondary { display: none !important; }
     }
+    /* Blob decorations */
+    .hero-blob-1 {
+      position: absolute; width: 600px; height: 600px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(99,102,241,0.12) 0%, transparent 70%);
+      top: -100px; right: -100px; pointer-events: none;
+    }
+    .hero-blob-2 {
+      position: absolute; width: 500px; height: 500px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(34,197,94,0.08) 0%, transparent 70%);
+      bottom: 0; left: -100px; pointer-events: none;
+    }
+    [data-theme="dark"] .hero-blob-1 { background: radial-gradient(ellipse, rgba(99,102,241,0.18) 0%, transparent 70%); }
+    [data-theme="dark"] .hero-blob-2 { background: radial-gradient(ellipse, rgba(16,185,129,0.10) 0%, transparent 70%); }
   </style>
 </head>
 <body x-data="{ mobileNav: false }">
 
 <!-- ── Navigation ── -->
 <nav class="landing-nav">
-  <a href="/" style="display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.1rem;color:inherit;text-decoration:none">
-    <span style="font-size:1.4rem">🏓</span>
+  <a href="/" style="display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.05rem;color:inherit;text-decoration:none">
+    <div style="width:32px;height:32px;background:linear-gradient(135deg,#6366f1,#4f46e5);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem;box-shadow:0 2px 8px rgba(99,102,241,0.3)">🏓</div>
     <span>TT Tracker</span>
-    <span class="badge badge-blue" style="font-size:0.65rem">BETA</span>
+    <span class="badge badge-blue" style="font-size:0.6rem;padding:1px 7px">BETA</span>
   </a>
   <div style="display:flex;gap:0.5rem;align-items:center">
     <a href="/demo" class="btn btn-ghost btn-sm nav-secondary">Démo</a>
@@ -72,7 +92,9 @@
 </nav>
 
 <!-- ── Hero ── -->
-<section class="landing-hero" style="background:radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.18) 0%, transparent 55%), radial-gradient(ellipse at 80% 80%, rgba(168,85,247,0.1) 0%, transparent 45%), var(--bg-primary);">
+<section class="landing-hero" style="background:var(--bg-primary);">
+  <div class="hero-blob-1"></div>
+  <div class="hero-blob-2"></div>
 
   <div class="hero-badge">
     <i data-lucide="zap" style="width:12px;height:12px"></i>
@@ -93,7 +115,7 @@
       <i data-lucide="play-circle" style="width:18px;height:18px"></i>
       Voir la démo
     </a>
-    <a href="/register" class="btn btn-primary btn-lg" style="box-shadow:0 8px 32px rgba(99,102,241,0.4)">
+    <a href="/register" class="btn btn-primary btn-lg" style="box-shadow:0 8px 32px rgba(99,102,241,0.35)">
       <i data-lucide="user-plus" style="width:18px;height:18px"></i>
       Créer mon compte — c'est gratuit
     </a>
@@ -104,18 +126,15 @@
   </p>
 
   <!-- App mockup -->
-  <div style="width:100%;max-width:860px;margin-top:3.5rem;perspective:1000px">
+  <div style="width:100%;max-width:860px;margin-top:3.5rem;perspective:1000px;position:relative;z-index:1">
     <div class="app-mockup" style="transform:rotateX(4deg)">
-      <!-- Browser chrome -->
       <div class="mockup-bar">
-        <div class="mockup-dot" style="background:#f43f5e"></div>
+        <div class="mockup-dot" style="background:#ef4444"></div>
         <div class="mockup-dot" style="background:#f59e0b"></div>
-        <div class="mockup-dot" style="background:#10b981"></div>
+        <div class="mockup-dot" style="background:#22c55e"></div>
         <div class="mockup-url">app.tttracker.com/dashboard</div>
       </div>
-      <!-- App body -->
       <div class="mockup-body">
-        <!-- Mini sidebar -->
         <div class="mockup-sidebar">
           <div class="mockup-icon active"></div>
           <div class="mockup-icon"></div>
@@ -123,58 +142,51 @@
           <div class="mockup-icon"></div>
           <div class="mockup-icon"></div>
         </div>
-        <!-- Content -->
         <div class="mockup-content" style="padding:0.25rem 0">
-          <!-- Page title -->
-          <div style="font-size:0.7rem;font-weight:800;color:var(--text-primary);letter-spacing:-0.02em;margin-bottom:2px">Dashboard</div>
-          <!-- Stat cards -->
+          <div style="font-size:0.7rem;font-weight:800;color:var(--text-primary);letter-spacing:-0.02em;margin-bottom:4px">Dashboard</div>
           <div class="mockup-stats">
             <div class="mockup-stat">
-              <div class="mockup-stat-val" style="color:var(--accent-blue)">1 247</div>
+              <div class="mockup-stat-val" style="color:#6366f1">1 247</div>
               <div class="mockup-stat-label">Coups</div>
             </div>
             <div class="mockup-stat">
-              <div class="mockup-stat-val" style="color:var(--accent-green)">89%</div>
+              <div class="mockup-stat-val" style="color:#22c55e">89%</div>
               <div class="mockup-stat-label">Win rate</div>
             </div>
             <div class="mockup-stat">
-              <div class="mockup-stat-val" style="color:var(--accent-orange)">🥇</div>
+              <div class="mockup-stat-val" style="color:#f97316">🥇</div>
               <div class="mockup-stat-label">Gold ELO</div>
             </div>
             <div class="mockup-stat">
-              <div class="mockup-stat-val" style="color:var(--accent-purple)">47</div>
+              <div class="mockup-stat-val" style="color:#a855f7">47</div>
               <div class="mockup-stat-label">Sessions</div>
             </div>
           </div>
-          <!-- Charts row -->
           <div class="mockup-row">
-            <!-- Bar chart -->
             <div class="mockup-chart">
-              <div class="mockup-bar-item" style="height:40%;background:rgba(99,102,241,0.3)"></div>
-              <div class="mockup-bar-item" style="height:65%;background:rgba(99,102,241,0.5)"></div>
-              <div class="mockup-bar-item" style="height:80%;background:rgba(99,102,241,0.7)"></div>
-              <div class="mockup-bar-item" style="height:55%;background:rgba(99,102,241,0.5)"></div>
-              <div class="mockup-bar-item" style="height:90%;background:var(--accent-blue)"></div>
-              <div class="mockup-bar-item" style="height:70%;background:rgba(99,102,241,0.6)"></div>
-              <div class="mockup-bar-item" style="height:85%;background:rgba(99,102,241,0.8)"></div>
+              <div class="mockup-bar-item" style="height:40%"></div>
+              <div class="mockup-bar-item" style="height:65%;opacity:0.75"></div>
+              <div class="mockup-bar-item" style="height:80%;opacity:0.85"></div>
+              <div class="mockup-bar-item" style="height:55%;opacity:0.7"></div>
+              <div class="mockup-bar-item" style="height:90%"></div>
+              <div class="mockup-bar-item" style="height:70%;opacity:0.8"></div>
+              <div class="mockup-bar-item" style="height:85%;opacity:0.9"></div>
             </div>
-            <!-- Radar placeholder -->
             <div class="mockup-radar" style="position:relative">
               <svg width="64" height="64" viewBox="0 0 64 64">
-                <polygon points="32,4 58,20 58,44 32,60 6,44 6,20" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-                <polygon points="32,12 50,24 50,40 32,52 14,40 14,24" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-                <polygon points="32,8 54,22 52,42 32,56 12,42 10,22" fill="rgba(99,102,241,0.25)" stroke="rgba(99,102,241,0.6)" stroke-width="1.5"/>
+                <polygon points="32,4 58,20 58,44 32,60 6,44 6,20" fill="none" stroke="var(--border)" stroke-width="1"/>
+                <polygon points="32,12 50,24 50,40 32,52 14,40 14,24" fill="none" stroke="var(--border)" stroke-width="1"/>
+                <polygon points="32,8 54,22 52,42 32,56 12,42 10,22" fill="rgba(99,102,241,0.18)" stroke="#6366f1" stroke-width="1.5"/>
               </svg>
             </div>
           </div>
-          <!-- Table -->
           <div class="mockup-table">
-            <div class="mockup-row-item" style="background:rgba(255,255,255,0.03);font-weight:700;color:var(--text-muted)">
+            <div class="mockup-row-item" style="background:var(--bg-secondary);font-weight:700;color:var(--text-muted)">
               <span>Session</span><span>Coups</span><span>Style</span>
             </div>
-            <div class="mockup-row-item"><span>Hier 18:30</span><span style="color:var(--accent-blue);font-weight:600">127</span><span style="color:var(--accent-green)">Attaquant</span></div>
-            <div class="mockup-row-item"><span>Mar 16:00</span><span style="color:var(--accent-blue);font-weight:600">89</span><span style="color:var(--accent-orange)">Équilibré</span></div>
-            <div class="mockup-row-item"><span>Lun 19:15</span><span style="color:var(--accent-blue);font-weight:600">203</span><span style="color:var(--accent-green)">Attaquant</span></div>
+            <div class="mockup-row-item"><span>Hier 18:30</span><span style="color:#6366f1;font-weight:600">127</span><span style="color:#22c55e">Attaquant</span></div>
+            <div class="mockup-row-item"><span>Mar 16:00</span><span style="color:#6366f1;font-weight:600">89</span><span style="color:#f97316">Équilibré</span></div>
+            <div class="mockup-row-item"><span>Lun 19:15</span><span style="color:#6366f1;font-weight:600">203</span><span style="color:#22c55e">Attaquant</span></div>
           </div>
         </div>
       </div>
@@ -187,15 +199,15 @@
   <div style="max-width:900px;margin:0 auto">
     <div class="stats-strip">
       <div style="text-align:center">
-        <div class="counter-value" data-countup="2400">0</div>
+        <div class="counter-value" data-countup="2400">2 400+</div>
         <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.25rem">Sessions enregistrées</div>
       </div>
       <div style="text-align:center">
-        <div class="counter-value" data-countup="18700">0</div>
+        <div class="counter-value" data-countup="18700">18 700+</div>
         <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.25rem">Coups analysés</div>
       </div>
       <div style="text-align:center">
-        <div class="counter-value" data-countup="340">0</div>
+        <div class="counter-value" data-countup="340">340+</div>
         <div style="color:var(--text-muted);font-size:0.85rem;margin-top:0.25rem">Joueurs actifs</div>
       </div>
       <div style="text-align:center">
@@ -210,40 +222,52 @@
 <section style="background:var(--bg-primary)">
   <div style="max-width:1100px;margin:0 auto">
     <div style="text-align:center;margin-bottom:3rem">
-      <span class="badge badge-purple" style="margin-bottom:0.75rem">Fonctionnalités</span>
+      <span class="badge badge-purple" style="margin-bottom:0.875rem">Fonctionnalités</span>
       <h2 style="font-size:2.25rem;font-weight:900;letter-spacing:-0.03em">Tout ce dont vous avez besoin</h2>
-      <p style="color:var(--text-muted);margin-top:0.75rem;font-size:1rem;max-width:500px;margin-inline:auto">Une plateforme complète, du firmware Arduino jusqu'à l'analyse de vos performances.</p>
+      <p style="color:var(--text-muted);margin-top:0.75rem;font-size:1rem;max-width:500px;margin-inline:auto;line-height:1.65">Une plateforme complète, du firmware Arduino jusqu'à l'analyse de vos performances.</p>
     </div>
     <div class="landing-features-grid stagger">
       <div class="feature-card animate-in">
-        <div class="feature-icon" style="background:rgba(99,102,241,0.15)">📡</div>
+        <div class="feature-icon" style="background:rgba(99,102,241,0.12)">
+          <i data-lucide="bluetooth" style="width:22px;height:22px;color:#6366f1"></i>
+        </div>
         <h3 style="font-weight:700;margin-bottom:0.5rem">BLE Temps réel</h3>
-        <p style="color:var(--text-muted);font-size:0.875rem;line-height:1.6">Connexion Bluetooth Low Energy avec vos raquettes Arduino/ESP32. Chaque coup capturé en &lt;50 ms via MQTT.</p>
+        <p style="color:var(--text-muted);font-size:0.875rem;line-height:1.65">Connexion Bluetooth Low Energy avec vos raquettes Arduino/ESP32. Chaque coup capturé en &lt;50 ms via MQTT.</p>
       </div>
       <div class="feature-card animate-in">
-        <div class="feature-icon" style="background:rgba(16,185,129,0.15)">📊</div>
+        <div class="feature-icon" style="background:rgba(34,197,94,0.12)">
+          <i data-lucide="radar" style="width:22px;height:22px;color:#16a34a"></i>
+        </div>
         <h3 style="font-weight:700;margin-bottom:0.5rem">Radar de style</h3>
-        <p style="color:var(--text-muted);font-size:0.875rem;line-height:1.6">Visualisez vos forces et faiblesses sur 6 axes. Topspin, slice, smash, bloc, service, lob — tout est mesuré.</p>
+        <p style="color:var(--text-muted);font-size:0.875rem;line-height:1.65">Visualisez vos forces et faiblesses sur 6 axes. Topspin, slice, smash, bloc, service, lob — tout est mesuré.</p>
       </div>
       <div class="feature-card animate-in">
-        <div class="feature-icon" style="background:rgba(245,158,11,0.15)">🏆</div>
+        <div class="feature-icon" style="background:rgba(249,115,22,0.12)">
+          <i data-lucide="award" style="width:22px;height:22px;color:#ea580c"></i>
+        </div>
         <h3 style="font-weight:700;margin-bottom:0.5rem">ELO & Classement</h3>
-        <p style="color:var(--text-muted);font-size:0.875rem;line-height:1.6">Système ELO adaptatif : Bronze → Diamond. Leaderboard global avec historique des parties et tendances.</p>
+        <p style="color:var(--text-muted);font-size:0.875rem;line-height:1.65">Système ELO adaptatif : Bronze → Diamond. Leaderboard global avec historique des parties et tendances.</p>
       </div>
       <div class="feature-card animate-in">
-        <div class="feature-icon" style="background:rgba(244,63,94,0.15)">🎯</div>
+        <div class="feature-icon" style="background:rgba(239,68,68,0.12)">
+          <i data-lucide="trophy" style="width:22px;height:22px;color:#dc2626"></i>
+        </div>
         <h3 style="font-weight:700;margin-bottom:0.5rem">Tournois</h3>
-        <p style="color:var(--text-muted);font-size:0.875rem;line-height:1.6">Bracket single-elimination avec gestion automatique des byes, avancement des gagnants et scores en direct.</p>
+        <p style="color:var(--text-muted);font-size:0.875rem;line-height:1.65">Bracket single-elimination avec gestion automatique des byes, avancement des gagnants et scores en direct.</p>
       </div>
       <div class="feature-card animate-in">
-        <div class="feature-icon" style="background:rgba(168,85,247,0.15)">📤</div>
+        <div class="feature-icon" style="background:rgba(168,85,247,0.12)">
+          <i data-lucide="download" style="width:22px;height:22px;color:#9333ea"></i>
+        </div>
         <h3 style="font-weight:700;margin-bottom:0.5rem">Export PDF / CSV</h3>
-        <p style="color:var(--text-muted);font-size:0.875rem;line-height:1.6">Partagez vos statistiques avec votre entraîneur. PDF illustré avec graphiques ou CSV brut pour vos propres analyses.</p>
+        <p style="color:var(--text-muted);font-size:0.875rem;line-height:1.65">Partagez vos statistiques avec votre entraîneur. PDF illustré avec graphiques ou CSV brut pour vos propres analyses.</p>
       </div>
       <div class="feature-card animate-in">
-        <div class="feature-icon" style="background:rgba(16,185,129,0.15)">📱</div>
+        <div class="feature-icon" style="background:rgba(34,197,94,0.12)">
+          <i data-lucide="smartphone" style="width:22px;height:22px;color:#16a34a"></i>
+        </div>
         <h3 style="font-weight:700;margin-bottom:0.5rem">PWA & Mobile</h3>
-        <p style="color:var(--text-muted);font-size:0.875rem;line-height:1.6">Installez sur iOS/Android comme une app native. Mode match optimisé plein écran, utilisable sur le bord du terrain.</p>
+        <p style="color:var(--text-muted);font-size:0.875rem;line-height:1.65">Installez sur iOS/Android comme une app native. Mode match optimisé plein écran, utilisable sur le bord du terrain.</p>
       </div>
     </div>
   </div>
@@ -253,7 +277,7 @@
 <section style="background:var(--bg-secondary)">
   <div style="max-width:700px;margin:0 auto">
     <div style="text-align:center;margin-bottom:3rem">
-      <span class="badge badge-green" style="margin-bottom:0.75rem">Démarrage</span>
+      <span class="badge badge-green" style="margin-bottom:0.875rem">Démarrage</span>
       <h2 style="font-size:2.25rem;font-weight:900;letter-spacing:-0.03em">Opérationnel en 3 étapes</h2>
     </div>
     <div style="display:flex;flex-direction:column;gap:2rem">
@@ -261,26 +285,26 @@
         <div class="step-badge">1</div>
         <div>
           <h3 style="font-weight:700;margin-bottom:0.4rem;font-size:1.05rem">Créez votre compte gratuit</h3>
-          <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.6">Inscription en 30 secondes. L'assistant d'onboarding vous guide pour personnaliser votre profil et associer votre raquette.</p>
+          <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.65">Inscription en 30 secondes. L'assistant d'onboarding vous guide pour personnaliser votre profil et associer votre raquette.</p>
         </div>
       </div>
       <div style="display:flex;align-items:flex-start;gap:1.25rem">
         <div class="step-badge">2</div>
         <div>
           <h3 style="font-weight:700;margin-bottom:0.4rem;font-size:1.05rem">Flashez le firmware Arduino</h3>
-          <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.6">Téléversez le firmware fourni sur votre Arduino Nano 33 BLE. La raquette se connecte automatiquement au bridge MQTT.</p>
+          <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.65">Téléversez le firmware fourni sur votre Arduino Nano 33 BLE. La raquette se connecte automatiquement au bridge MQTT.</p>
         </div>
       </div>
       <div style="display:flex;align-items:flex-start;gap:1.25rem">
         <div class="step-badge">3</div>
         <div>
           <h3 style="font-weight:700;margin-bottom:0.4rem;font-size:1.05rem">Jouez et progressez</h3>
-          <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.6">Démarrez une session d'entraînement ou un match. Les coups sont analysés en temps réel, vos stats disponibles immédiatement après.</p>
+          <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.65">Démarrez une session d'entraînement ou un match. Les coups sont analysés en temps réel, vos stats disponibles immédiatement après.</p>
         </div>
       </div>
     </div>
     <div style="text-align:center;margin-top:3rem">
-      <a href="/register" class="btn btn-primary btn-lg" style="box-shadow:0 8px 32px rgba(99,102,241,0.4)">
+      <a href="/register" class="btn btn-primary btn-lg" style="box-shadow:0 8px 32px rgba(99,102,241,0.35)">
         <i data-lucide="rocket" style="width:18px;height:18px"></i>
         Commencer maintenant — c'est gratuit
       </a>
@@ -292,7 +316,7 @@
 <section style="background:var(--bg-primary)">
   <div style="max-width:1000px;margin:0 auto">
     <div style="text-align:center;margin-bottom:3rem">
-      <span class="badge badge-orange" style="margin-bottom:0.75rem">Témoignages</span>
+      <span class="badge badge-orange" style="margin-bottom:0.875rem">Témoignages</span>
       <h2 style="font-size:2.25rem;font-weight:900;letter-spacing:-0.03em">Ce que disent nos joueurs</h2>
     </div>
     <div class="testimonials-grid">
@@ -300,7 +324,7 @@
         <div class="stars" style="margin-bottom:0.75rem">★★★★★</div>
         <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.7;margin-bottom:1rem">« Incroyable de voir en temps réel que je rate 80% de mes topspin revers sous pression. Le radar a transformé mon entraînement. »</p>
         <div style="display:flex;align-items:center;gap:0.75rem">
-          <div style="width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,0.3);display:flex;align-items:center;justify-content:center;font-weight:800">M</div>
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(99,102,241,0.2);border:2px solid rgba(99,102,241,0.3);display:flex;align-items:center;justify-content:center;font-weight:800;color:#6366f1">M</div>
           <div>
             <div style="font-weight:700;font-size:0.875rem">Marc D.</div>
             <div style="color:var(--text-muted);font-size:0.78rem">Niveau régional, Paris</div>
@@ -311,7 +335,7 @@
         <div class="stars" style="margin-bottom:0.75rem">★★★★★</div>
         <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.7;margin-bottom:1rem">« Le mode tournoi est parfait pour notre club. On projette le bracket sur l'écran du gymnase, les joueurs adorent. »</p>
         <div style="display:flex;align-items:center;gap:0.75rem">
-          <div style="width:36px;height:36px;border-radius:50%;background:rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:center;font-weight:800">S</div>
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(34,197,94,0.2);border:2px solid rgba(34,197,94,0.3);display:flex;align-items:center;justify-content:center;font-weight:800;color:#16a34a">S</div>
           <div>
             <div style="font-weight:700;font-size:0.875rem">Sophie L.</div>
             <div style="color:var(--text-muted);font-size:0.78rem">Entraîneuse, Lyon</div>
@@ -322,7 +346,7 @@
         <div class="stars" style="margin-bottom:0.75rem">★★★★☆</div>
         <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.7;margin-bottom:1rem">« La progression ELO me motive à jouer plus régulièrement. J'ai atteint le rang Gold en 3 semaines d'entraînement quotidien. »</p>
         <div style="display:flex;align-items:center;gap:0.75rem">
-          <div style="width:36px;height:36px;border-radius:50%;background:rgba(245,158,11,0.3);display:flex;align-items:center;justify-content:center;font-weight:800">T</div>
+          <div style="width:36px;height:36px;border-radius:50%;background:rgba(249,115,22,0.2);border:2px solid rgba(249,115,22,0.3);display:flex;align-items:center;justify-content:center;font-weight:800;color:#ea580c">T</div>
           <div>
             <div style="font-weight:700;font-size:0.875rem">Thomas R.</div>
             <div style="color:var(--text-muted);font-size:0.78rem">Passionné, Bordeaux</div>
@@ -336,29 +360,29 @@
 <!-- ── Pricing preview ── -->
 <section style="background:var(--bg-secondary)">
   <div style="max-width:700px;margin:0 auto;text-align:center">
-    <span class="badge badge-blue" style="margin-bottom:0.75rem">Tarifs</span>
+    <span class="badge badge-blue" style="margin-bottom:0.875rem">Tarifs</span>
     <h2 style="font-size:2.25rem;font-weight:900;letter-spacing:-0.03em;margin-bottom:0.75rem">Commencez gratuitement</h2>
-    <p style="color:var(--text-muted);margin-bottom:2.5rem">Toutes les fonctionnalités de base sont gratuites. Passez à Club pour débloquer l'historique complet et les PDF.</p>
+    <p style="color:var(--text-muted);margin-bottom:2.5rem;line-height:1.65">Toutes les fonctionnalités de base sont gratuites. Passez à Club pour débloquer l'historique complet et les PDF.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;max-width:580px;margin:0 auto">
       <div class="card" style="padding:1.75rem;text-align:left">
         <div style="font-size:1.1rem;font-weight:800;margin-bottom:0.25rem">Free</div>
-        <div style="font-size:2rem;font-weight:900;margin:0.5rem 0">0 €</div>
+        <div style="font-size:2rem;font-weight:900;margin:0.5rem 0;letter-spacing:-0.03em">0 €</div>
         <ul style="list-style:none;color:var(--text-muted);font-size:0.875rem;display:flex;flex-direction:column;gap:0.4rem">
-          <li>✓ 1 raquette</li>
-          <li>✓ 30j historique</li>
-          <li>✓ Export CSV</li>
-          <li>✓ 1 tournoi</li>
+          <li style="display:flex;align-items:center;gap:6px"><span style="color:#22c55e;font-weight:700">✓</span> 1 raquette</li>
+          <li style="display:flex;align-items:center;gap:6px"><span style="color:#22c55e;font-weight:700">✓</span> 30j historique</li>
+          <li style="display:flex;align-items:center;gap:6px"><span style="color:#22c55e;font-weight:700">✓</span> Export CSV</li>
+          <li style="display:flex;align-items:center;gap:6px"><span style="color:#22c55e;font-weight:700">✓</span> 1 tournoi</li>
         </ul>
         <a href="/register" class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:1.25rem">Commencer</a>
       </div>
-      <div class="card" style="padding:1.75rem;text-align:left;border-color:var(--accent-blue);box-shadow:0 0 0 1px var(--accent-blue),0 8px 32px rgba(99,102,241,0.2)">
-        <div style="font-size:1.1rem;font-weight:800;margin-bottom:0.25rem">Club ⭐</div>
-        <div style="font-size:2rem;font-weight:900;margin:0.5rem 0">15 €<span style="font-size:0.9rem;font-weight:400;color:var(--text-muted)">/mois</span></div>
+      <div class="card" style="padding:1.75rem;text-align:left;border-color:#6366f1;box-shadow:0 0 0 1px #6366f1,0 8px 32px rgba(99,102,241,0.15)">
+        <div style="font-size:1.1rem;font-weight:800;margin-bottom:0.25rem">Club <span style="color:#f59e0b">⭐</span></div>
+        <div style="font-size:2rem;font-weight:900;margin:0.5rem 0;letter-spacing:-0.03em">15 €<span style="font-size:0.9rem;font-weight:400;color:var(--text-muted)">/mois</span></div>
         <ul style="list-style:none;font-size:0.875rem;display:flex;flex-direction:column;gap:0.4rem">
-          <li style="color:var(--accent-green)">✓ Raquettes illimitées</li>
-          <li style="color:var(--accent-green)">✓ Historique complet</li>
-          <li style="color:var(--accent-green)">✓ Export PDF</li>
-          <li style="color:var(--accent-green)">✓ Tournois illimités</li>
+          <li style="display:flex;align-items:center;gap:6px"><span style="color:#22c55e;font-weight:700">✓</span> Raquettes illimitées</li>
+          <li style="display:flex;align-items:center;gap:6px"><span style="color:#22c55e;font-weight:700">✓</span> Historique complet</li>
+          <li style="display:flex;align-items:center;gap:6px"><span style="color:#22c55e;font-weight:700">✓</span> Export PDF</li>
+          <li style="display:flex;align-items:center;gap:6px"><span style="color:#22c55e;font-weight:700">✓</span> Tournois illimités</li>
         </ul>
         <a href="/pricing" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:1.25rem">Voir Club →</a>
       </div>
@@ -370,7 +394,7 @@
 <section style="background:var(--bg-primary)">
   <div style="max-width:680px;margin:0 auto">
     <div style="text-align:center;margin-bottom:3rem">
-      <span class="badge badge-gray" style="margin-bottom:0.75rem">FAQ</span>
+      <span class="badge badge-gray" style="margin-bottom:0.875rem">FAQ</span>
       <h2 style="font-size:2.25rem;font-weight:900;letter-spacing:-0.03em">Questions fréquentes</h2>
     </div>
     <div id="faq-list">
@@ -423,19 +447,23 @@
   </div>
 </section>
 
-<!-- ── Final CTA ── -->
-<section style="background:var(--bg-secondary);text-align:center">
-  <div style="max-width:600px;margin:0 auto">
+<!-- ── Final CTA — gradient premium ── -->
+<section style="background:linear-gradient(135deg,#6366f1 0%,#4f46e5 50%,#22c55e 100%);text-align:center;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 30% 50%,rgba(255,255,255,0.1) 0%,transparent 60%)"></div>
+  <div style="max-width:600px;margin:0 auto;position:relative;z-index:1">
     <div style="font-size:3rem;margin-bottom:1rem">🏓</div>
-    <h2 style="font-size:2.25rem;font-weight:900;letter-spacing:-0.03em;margin-bottom:0.75rem">
+    <h2 style="font-size:2.25rem;font-weight:900;letter-spacing:-0.03em;margin-bottom:0.75rem;color:#fff">
       Prêt à analyser votre jeu ?
     </h2>
-    <p style="color:var(--text-muted);margin-bottom:2rem;font-size:1rem;line-height:1.7">
+    <p style="color:rgba(255,255,255,0.82);margin-bottom:2rem;font-size:1rem;line-height:1.7">
       Rejoignez les joueurs qui progressent plus vite grâce à des données réelles. Gratuit, sans carte bancaire.
     </p>
     <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
-      <a href="/demo" class="btn btn-ghost btn-lg">Voir la démo</a>
-      <a href="/register" class="btn btn-primary btn-lg" style="box-shadow:0 8px 32px rgba(99,102,241,0.4)">
+      <a href="/demo" class="btn btn-lg" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);backdrop-filter:blur(4px)">
+        <i data-lucide="play-circle" style="width:18px;height:18px"></i>
+        Voir la démo
+      </a>
+      <a href="/register" class="btn btn-lg" style="background:#ffffff;color:#4f46e5;font-weight:700;box-shadow:0 8px 32px rgba(0,0,0,0.15)">
         <i data-lucide="user-plus" style="width:18px;height:18px"></i>
         Créer mon compte gratuit
       </a>
@@ -446,7 +474,8 @@
 <!-- ── Footer ── -->
 <footer>
   <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:0.75rem;font-size:1rem;font-weight:800;color:var(--text-primary)">
-    <span>🏓</span> TT Tracker
+    <div style="width:28px;height:28px;background:linear-gradient(135deg,#6366f1,#4f46e5);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:0.875rem">🏓</div>
+    TT Tracker
   </div>
   <p>Suivi ping-pong connecté · Intelligence artificielle embarquée</p>
   <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:1.5rem;margin-top:1rem">
@@ -459,14 +488,14 @@
   <p style="margin-top:1rem;font-size:0.75rem">&copy; 2026 TT Tracker — Tous droits réservés</p>
 </footer>
 
-<!-- Cookie consent banner -->
+<!-- Cookie consent -->
 <div x-data="{ show: !localStorage.getItem('tt_cookie_consent') }"
      x-show="show"
      x-transition.opacity
-     style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:rgba(15,15,23,0.95);backdrop-filter:blur(12px);border-top:1px solid var(--border);padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+     style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--bg-card);border-top:1px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,0.06);padding:0.875rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap">
   <p style="margin:0;font-size:0.85rem;color:var(--text-muted)">
     🍪 Ce site utilise des cookies essentiels pour votre session.
-    <a href="/legal/privacy" style="color:var(--accent-blue)">En savoir plus</a>
+    <a href="/legal/privacy" style="color:var(--accent-blue);font-weight:600">En savoir plus</a>
   </p>
   <button class="btn btn-primary btn-sm"
           @click="localStorage.setItem('tt_cookie_consent','1'); show = false">

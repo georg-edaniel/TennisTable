@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="{{ lang|default('fr') }}" data-theme="dark" x-data>
+<html lang="{{ lang|default('fr') }}" data-theme="light" x-data>
 <head>
 <!-- Apply theme from localStorage BEFORE Alpine/CSS paint — prevents flash -->
 <script>
   (function() {
-    var th = localStorage.getItem('tt_theme') || 'dark';
+    var th = localStorage.getItem('tt_theme') || 'light';
     document.documentElement.setAttribute('data-theme', th);
   })();
 </script>
@@ -16,13 +16,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <!-- Tailwind CSS (build purgé — npx tailwindcss -i ... -o tailwind.min.css --minify) -->
+  <!-- Tailwind CSS -->
   <link rel="stylesheet" href="/static/css/tailwind.min.css?v={{ css_v }}">
 
   <!-- Design tokens + composants custom -->
   <link rel="stylesheet" href="/static/css/app.css?v={{ css_v }}">
 
-  <!-- Alpine.js (defer so store is init'd before DOM) -->
+  <!-- Alpine.js -->
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
   <!-- ApexCharts -->
@@ -31,7 +31,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
-  <!-- App JS (store + WS client) — before Alpine.start -->
+  <!-- App JS -->
   <script src="/static/js/app.js"></script>
 
   <!-- PWA -->
@@ -46,7 +46,7 @@
 </head>
 <body x-data="{
   sidebarOpen: false,
-  theme: localStorage.getItem('tt_theme') || 'dark',
+  theme: localStorage.getItem('tt_theme') || 'light',
   toggleTheme() {
     this.theme = this.theme === 'dark' ? 'light' : 'dark';
     localStorage.setItem('tt_theme', this.theme);
@@ -67,125 +67,151 @@
 
 <!-- ── Sidebar ── -->
 <aside class="sidebar" :class="sidebarOpen && 'open'">
+  <!-- Logo -->
   <div class="sidebar-logo">
-    <span>🏓</span>
-    <span>TT Tracker</span>
+    <div class="sidebar-logo-icon">🏓</div>
+    <span style="font-size:1rem;font-weight:800;letter-spacing:-0.02em">TT Tracker</span>
+    <span class="sidebar-logo-live">
+      <span class="dot dot-green animate-pulse" style="width:5px;height:5px;min-width:5px"></span>
+      LIVE
+    </span>
   </div>
 
   <nav class="sidebar-nav">
     <div class="sidebar-section">{{ t('nav.navigation') }}</div>
     <a href="/dashboard" class="sidebar-link {% if request.url.path == '/dashboard' %}active{% endif %}">
-      <i data-lucide="layout-dashboard" style="width:16px;height:16px"></i>
+      <span class="sidebar-link-icon" style="background:{% if request.url.path == '/dashboard' %}rgba(99,102,241,0.12){% else %}var(--bg-secondary){% endif %}">
+        <i data-lucide="layout-dashboard" style="width:15px;height:15px;color:{% if request.url.path == '/dashboard' %}var(--accent-blue){% else %}var(--text-muted){% endif %}"></i>
+      </span>
       <span>{{ t('nav.dashboard') }}</span>
     </a>
 
     <div class="sidebar-section" style="margin-top:0.5rem">{{ t('nav.game') }}</div>
     <a href="/training" class="sidebar-link {% if request.url.path == '/training' %}active{% endif %}">
-      <i data-lucide="zap" style="width:16px;height:16px"></i>
+      <span class="sidebar-link-icon" style="background:{% if request.url.path == '/training' %}rgba(99,102,241,0.12){% else %}rgba(34,197,94,0.08){% endif %}">
+        <i data-lucide="zap" style="width:15px;height:15px;color:{% if request.url.path == '/training' %}var(--accent-blue){% else %}var(--accent-green){% endif %}"></i>
+      </span>
       <span>{{ t('nav.training') }}</span>
     </a>
     <a href="/match" class="sidebar-link {% if request.url.path == '/match' %}active{% endif %}">
-      <i data-lucide="trophy" style="width:16px;height:16px"></i>
+      <span class="sidebar-link-icon" style="background:{% if request.url.path == '/match' %}rgba(99,102,241,0.12){% else %}rgba(249,115,22,0.08){% endif %}">
+        <i data-lucide="trophy" style="width:15px;height:15px;color:{% if request.url.path == '/match' %}var(--accent-blue){% else %}var(--accent-orange){% endif %}"></i>
+      </span>
       <span>{{ t('nav.match') }}</span>
     </a>
     <a href="/setup" class="sidebar-link {% if request.url.path == '/setup' %}active{% endif %}">
-      <i data-lucide="bluetooth" style="width:16px;height:16px"></i>
+      <span class="sidebar-link-icon" style="background:{% if request.url.path == '/setup' %}rgba(99,102,241,0.12){% else %}rgba(99,102,241,0.08){% endif %}">
+        <i data-lucide="bluetooth" style="width:15px;height:15px;color:{% if request.url.path == '/setup' %}var(--accent-blue){% else %}#6366f1{% endif %}"></i>
+      </span>
       <span>{{ t('nav.connect_racket') }}</span>
     </a>
     <a href="/leaderboard" class="sidebar-link {% if '/leaderboard' in request.url.path %}active{% endif %}">
-      <i data-lucide="award" style="width:16px;height:16px"></i>
+      <span class="sidebar-link-icon" style="background:{% if '/leaderboard' in request.url.path %}rgba(99,102,241,0.12){% else %}rgba(168,85,247,0.08){% endif %}">
+        <i data-lucide="award" style="width:15px;height:15px;color:{% if '/leaderboard' in request.url.path %}var(--accent-blue){% else %}var(--accent-purple){% endif %}"></i>
+      </span>
       <span>{{ t('nav.leaderboard') }}</span>
     </a>
 
     <div class="sidebar-section" style="margin-top:0.5rem">{{ t('nav.competitions') }}</div>
     <a href="/tournaments" class="sidebar-link {% if '/tournaments' in request.url.path %}active{% endif %}">
-      <i data-lucide="trophy" style="width:16px;height:16px"></i>
+      <span class="sidebar-link-icon" style="background:{% if '/tournaments' in request.url.path %}rgba(99,102,241,0.12){% else %}rgba(249,115,22,0.08){% endif %}">
+        <i data-lucide="shield" style="width:15px;height:15px;color:{% if '/tournaments' in request.url.path %}var(--accent-blue){% else %}var(--accent-orange){% endif %}"></i>
+      </span>
       <span>{{ t('nav.tournaments') }}</span>
     </a>
     <a href="/challenges" class="sidebar-link {% if '/challenges' in request.url.path %}active{% endif %}"
        x-data="{ count: 0 }"
        x-init="fetch('/api/challenges',{credentials:'include'}).then(r=>r.ok?r.json():{received:[]}).then(d=>{count=d.received?.length||0})">
-      <i data-lucide="swords" style="width:16px;height:16px"></i>
+      <span class="sidebar-link-icon" style="background:rgba(239,68,68,0.08)">
+        <i data-lucide="swords" style="width:15px;height:15px;color:var(--accent-red)"></i>
+      </span>
       <span>{{ t('nav.challenges') }}</span>
       <span x-show="count>0" x-text="count"
-            style="margin-left:auto;background:#f43f5e;color:#fff;border-radius:10px;padding:1px 7px;font-size:0.7rem;font-weight:700"></span>
+            style="margin-left:auto;background:#ef4444;color:#fff;border-radius:10px;padding:1px 7px;font-size:0.7rem;font-weight:700"></span>
     </a>
     <a href="/clubs" class="sidebar-link {% if '/clubs' in request.url.path %}active{% endif %}">
-      <i data-lucide="users" style="width:16px;height:16px"></i>
+      <span class="sidebar-link-icon" style="background:rgba(34,197,94,0.08)">
+        <i data-lucide="users" style="width:15px;height:15px;color:var(--accent-green)"></i>
+      </span>
       <span>{{ t('nav.clubs') }}</span>
     </a>
 
     <div class="sidebar-section" style="margin-top:0.5rem">{{ t('nav.data') }}</div>
     <a href="/analysis" class="sidebar-link {% if request.url.path == '/analysis' %}active{% endif %}">
-      <i data-lucide="bar-chart-2" style="width:16px;height:16px"></i>
+      <span class="sidebar-link-icon" style="background:{% if request.url.path == '/analysis' %}rgba(99,102,241,0.12){% else %}rgba(99,102,241,0.08){% endif %}">
+        <i data-lucide="bar-chart-2" style="width:15px;height:15px;color:var(--accent-blue)"></i>
+      </span>
       <span>{{ t('nav.analysis') }}</span>
     </a>
     <a href="/rackets" class="sidebar-link {% if request.url.path == '/rackets' %}active{% endif %}">
-      <i data-lucide="circle" style="width:16px;height:16px"></i>
+      <span class="sidebar-link-icon" style="background:rgba(168,85,247,0.08)">
+        <i data-lucide="circle" style="width:15px;height:15px;color:var(--accent-purple)"></i>
+      </span>
       <span>{{ t('nav.rackets') }}</span>
     </a>
 
     {% if user.role == 'admin' %}
     <div class="sidebar-section" style="margin-top:0.5rem">{{ t('nav.admin') }}</div>
     <a href="/admin/users" class="sidebar-link {% if '/admin' in request.url.path %}active{% endif %}">
-      <i data-lucide="users" style="width:16px;height:16px"></i>
+      <span class="sidebar-link-icon" style="background:rgba(249,115,22,0.08)">
+        <i data-lucide="settings" style="width:15px;height:15px;color:var(--accent-orange)"></i>
+      </span>
       <span>{{ t('nav.users') }}</span>
     </a>
     {% endif %}
   </nav>
 
   <div class="sidebar-footer">
+    <!-- User profile row -->
+    <div style="display:flex;align-items:center;gap:0.625rem;margin-bottom:0.75rem;padding:0.625rem;background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--border)">
+      <div class="sidebar-avatar">{{ (user.display_name or user.username)[0].upper() }}</div>
+      <div style="min-width:0;flex:1">
+        <a href="/player/{{ user.id }}" style="color:var(--text-primary);text-decoration:none;font-weight:700;font-size:0.82rem;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ user.display_name or user.username }}</a>
+        <div style="display:flex;align-items:center;gap:4px;margin-top:2px">
+          <span class="badge badge-{% if user.role == 'admin' %}orange{% elif user.role == 'player' %}blue{% else %}gray{% endif %}" style="font-size:0.62rem;padding:1px 6px">{{ user.role }}</span>
+          {% if user.elo_matches > 0 %}
+            {% set r = user.elo_rating %}
+            {% if r >= 1600 %}<span class="elo-badge elo-diamond" style="font-size:0.65rem;padding:1px 6px">💎 {{ r | round(0) | int }}</span>
+            {% elif r >= 1400 %}<span class="elo-badge elo-gold" style="font-size:0.65rem;padding:1px 6px">🥇 {{ r | round(0) | int }}</span>
+            {% elif r >= 1200 %}<span class="elo-badge elo-silver" style="font-size:0.65rem;padding:1px 6px">🥈 {{ r | round(0) | int }}</span>
+            {% else %}<span class="elo-badge elo-bronze" style="font-size:0.65rem;padding:1px 6px">🥉 {{ r | round(0) | int }}</span>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
     <!-- BLE connect button -->
-    <div style="margin-bottom:0.75rem;">
+    <div style="margin-bottom:0.5rem;" x-data>
       <template x-if="!$store.tennis.webBleConnected">
         <button @click="$store.tennis.connectBLE()"
                 class="btn btn-ghost btn-sm"
-                style="width:100%;justify-content:center;border:1px solid rgba(99,102,241,0.4);color:var(--accent-blue)">
-          <span class="dot dot-gray" style="width:8px;height:8px;min-width:8px;border-radius:50%;background:#6b7280"></span>
+                style="width:100%;justify-content:center;border-color:rgba(99,102,241,0.3);color:var(--accent-blue)">
+          <span style="width:7px;height:7px;border-radius:50%;background:#94a3b8;flex-shrink:0"></span>
           <span>{{ t('nav.connect_my_racket') }}</span>
         </button>
       </template>
       <template x-if="$store.tennis.webBleConnected">
         <button @click="$store.tennis.disconnectBLE()"
                 class="btn btn-ghost btn-sm"
-                style="width:100%;justify-content:center;border:1px solid rgba(16,185,129,0.4);color:#10b981">
-          <span class="dot dot-green animate-pulse" style="width:8px;height:8px;min-width:8px;border-radius:50%;background:#10b981"></span>
+                style="width:100%;justify-content:center;border-color:rgba(34,197,94,0.35);color:var(--accent-green)">
+          <span class="dot dot-green animate-pulse" style="width:7px;height:7px;min-width:7px"></span>
           <span x-text="$store.tennis.webBleDevice || '{{ t('nav.racket_connected') }}'"></span>
         </button>
       </template>
     </div>
-    <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.5rem;font-weight:600;">
-      <a href="/player/{{ user.id }}" style="color:var(--text-primary);text-decoration:none">{{ user.display_name or user.username }}</a>
-      <span class="badge badge-{% if user.role == 'admin' %}orange{% elif user.role == 'player' %}blue{% else %}gray{% endif %}" style="margin-left:4px">
-        {{ user.role }}
-      </span>
-    </div>
-    {% if user.elo_matches > 0 %}
-      {% set r = user.elo_rating %}
-      {% if r >= 1600 %}
-        <span class="elo-badge elo-diamond" style="margin-bottom:0.4rem">💎 {{ r | round(0) | int }}</span>
-      {% elif r >= 1400 %}
-        <span class="elo-badge elo-gold" style="margin-bottom:0.4rem">🥇 {{ r | round(0) | int }}</span>
-      {% elif r >= 1200 %}
-        <span class="elo-badge elo-silver" style="margin-bottom:0.4rem">🥈 {{ r | round(0) | int }}</span>
-      {% else %}
-        <span class="elo-badge elo-bronze" style="margin-bottom:0.4rem">🥉 {{ r | round(0) | int }}</span>
-      {% endif %}
-    {% else %}
-      <span style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.4rem">{{ t('nav.elo_beginner') }}</span>
-    {% endif %}
 
-    <!-- Theme toggle + Language switcher (row) -->
+    <!-- Theme / Language row -->
     <div style="display:flex;gap:0.4rem;margin-bottom:0.4rem">
       <button @click="toggleTheme()"
               class="btn btn-ghost btn-sm"
               style="flex:1;justify-content:center"
-              :title="theme === 'dark' ? '{{ t('theme.toggle') }} clair' : '{{ t('theme.toggle') }} sombre'">
+              :title="theme === 'dark' ? 'Mode clair' : 'Mode sombre'">
         <template x-if="theme === 'dark'">
-          <i data-lucide="sun" style="width:14px;height:14px"></i>
+          <i data-lucide="sun" style="width:14px;height:14px;color:#f59e0b"></i>
         </template>
         <template x-if="theme === 'light'">
-          <i data-lucide="moon" style="width:14px;height:14px"></i>
+          <i data-lucide="moon" style="width:14px;height:14px;color:#6366f1"></i>
         </template>
       </button>
       <a href="/set-lang?lang={{ 'en' if lang == 'fr' else 'fr' }}&next={{ request.url.path }}"
@@ -196,30 +222,30 @@
     </div>
 
     <a href="/change-password" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-bottom:0.4rem">
-      <i data-lucide="key" style="width:14px;height:14px"></i>
+      <i data-lucide="key" style="width:13px;height:13px"></i>
       <span>{{ t('nav.password') }}</span>
     </a>
     {% if user.subscription_tier == 'free' %}
-    <a href="/pricing" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-bottom:0.4rem;border:1px solid var(--accent-blue);color:var(--accent-blue)">
-      <i data-lucide="arrow-up-circle" style="width:14px;height:14px"></i>
+    <a href="/pricing" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-bottom:0.4rem">
+      <i data-lucide="arrow-up-circle" style="width:13px;height:13px"></i>
       <span>{{ t('nav.upgrade') }}</span>
     </a>
     {% endif %}
     <a href="/login" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location='/login');return false;"
-       class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">
-      <i data-lucide="log-out" style="width:14px;height:14px"></i>
+       class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;color:var(--accent-red);border-color:rgba(239,68,68,0.2)">
+      <i data-lucide="log-out" style="width:13px;height:13px"></i>
       <span>{{ t('nav.logout') }}</span>
     </a>
   </div>
 </aside>
 
-<!-- ── Bannière iOS (Web Bluetooth non supporté) ── -->
+<!-- ── Bannière iOS ── -->
 <div id="ios-ble-banner"
-     style="display:none;position:sticky;top:0;z-index:900;background:rgba(245,158,11,0.12);border-bottom:1px solid rgba(245,158,11,0.3);padding:0.6rem 1rem;font-size:0.82rem;color:#f59e0b;align-items:center;gap:0.6rem;flex-wrap:wrap">
+     style="display:none;position:sticky;top:0;z-index:900;background:rgba(249,115,22,0.08);border-bottom:1px solid rgba(249,115,22,0.2);padding:0.6rem 1rem;font-size:0.82rem;color:var(--accent-orange);align-items:center;gap:0.6rem;flex-wrap:wrap">
   <i data-lucide="alert-triangle" style="width:15px;height:15px;flex-shrink:0"></i>
   <span><strong>{{ t('ios.ble_title') }}</strong> — {{ t('ios.ble_body') }}</span>
   <button onclick="this.parentElement.style.display='none';localStorage.setItem('tt_ios_banner_dismissed','1')"
-          style="margin-left:auto;background:none;border:none;color:#f59e0b;cursor:pointer;font-size:1rem;line-height:1">✕</button>
+          style="margin-left:auto;background:none;border:none;color:var(--accent-orange);cursor:pointer;font-size:1rem;line-height:1">✕</button>
 </div>
 <script>
   (function() {
@@ -233,11 +259,12 @@
 </script>
 
 <!-- ── Notifications ── -->
-<div style="position:fixed;top:1rem;right:1rem;z-index:999;display:flex;flex-direction:column;gap:8px;">
+<div style="position:fixed;top:1rem;right:1rem;z-index:999;display:flex;flex-direction:column;gap:8px;max-width:320px">
   <template x-for="n in $store.tennis.notifications" :key="n.id">
-    <div class="card animate-in" style="padding:0.6rem 1rem;font-size:0.85rem;min-width:200px;"
+    <div class="card animate-in"
+         style="padding:0.75rem 1rem;font-size:0.85rem;display:flex;align-items:flex-start;gap:0.5rem"
          :class="{'toast-success':n.type==='success','toast-error':n.type==='error','toast-info':n.type==='info'}">
-      <span x-text="n.text"></span>
+      <span x-text="n.text" style="flex:1"></span>
     </div>
   </template>
 </div>
@@ -250,7 +277,6 @@
 </main>
 
 <script>
-  // Init Lucide icons after DOM + re-run on Alpine mutations (theme toggle uses x-if)
   document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) lucide.createIcons();
   });
@@ -263,15 +289,15 @@
 
 {% block scripts %}{% endblock %}
 
-<!-- Cookie consent banner -->
+<!-- Cookie consent -->
 <div id="cookie-banner"
-     style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--bg-card);border-top:1px solid var(--border);padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap"
+     style="position:fixed;bottom:0;left:0;right:0;z-index:9999;background:var(--bg-card);border-top:1px solid var(--border);box-shadow:0 -4px 20px rgba(0,0,0,0.06);padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap"
      x-data="{ show: !localStorage.getItem('tt_cookie_consent') }"
      x-show="show"
      x-transition.opacity>
   <p style="margin:0;font-size:0.875rem;color:var(--text-muted)">
     🍪 {{ t('footer.cookie_msg') }}
-    <a href="/legal/privacy" style="color:var(--accent-blue)">{{ t('footer.learn_more') }}</a>
+    <a href="/legal/privacy" style="color:var(--accent-blue);font-weight:600">{{ t('footer.learn_more') }}</a>
   </p>
   <button class="btn btn-primary btn-sm"
           @click="localStorage.setItem('tt_cookie_consent','1'); show = false">
@@ -279,8 +305,8 @@
   </button>
 </div>
 
-<!-- Footer legal links -->
-<footer style="text-align:center;padding:1rem;color:var(--text-muted);font-size:0.8rem;border-top:1px solid var(--border);margin-top:auto">
+<!-- Footer -->
+<footer style="text-align:center;padding:1rem;color:var(--text-muted);font-size:0.78rem;border-top:1px solid var(--border);margin-top:auto">
   <a href="/legal/cgu" style="color:var(--text-muted);text-decoration:none;margin:0 0.5rem">{{ t('footer.cgu') }}</a> ·
   <a href="/legal/privacy" style="color:var(--text-muted);text-decoration:none;margin:0 0.5rem">{{ t('footer.privacy') }}</a> ·
   <span style="margin:0 0.5rem">🏓 {{ t('footer.copyright') }}</span>

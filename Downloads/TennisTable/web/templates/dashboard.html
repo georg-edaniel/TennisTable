@@ -8,15 +8,15 @@
 </div>
 
 {% if total_sessions == 0 %}
-<!-- ── Quick Start Banner (nouveaux utilisateurs) ── -->
-<div class="card animate-in" style="margin-bottom:1.25rem;border:1px solid rgba(99,102,241,0.3);background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.05))">
+<!-- ── Quick Start Banner ── -->
+<div class="card animate-in" style="margin-bottom:1.25rem;border-color:rgba(99,102,241,0.2);background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(139,92,246,0.04))">
   <div style="display:flex;align-items:flex-start;gap:1rem;flex-wrap:wrap">
-    <div style="font-size:2.5rem;line-height:1">🚀</div>
+    <div style="width:48px;height:48px;background:linear-gradient(135deg,#6366f1,#4f46e5);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;box-shadow:0 4px 12px rgba(99,102,241,0.3)">🚀</div>
     <div style="flex:1;min-width:200px">
-      <div style="font-weight:800;font-size:1rem;margin-bottom:0.4rem">{{ t('dashboard.ready_title') }}</div>
-      <div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:0.75rem">
+      <div style="font-weight:800;font-size:1rem;margin-bottom:0.5rem">{{ t('dashboard.ready_title') }}</div>
+      <div style="display:flex;flex-direction:column;gap:0.4rem;margin-top:0.5rem">
         <div style="display:flex;align-items:center;gap:0.6rem;font-size:0.875rem">
-          <span style="min-width:22px;height:22px;background:#10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:#fff">1</span>
+          <span style="min-width:22px;height:22px;background:var(--accent-green);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:800;color:#fff">1</span>
           <span style="color:var(--text-muted)">{{ t('dashboard.step1') }}</span>
         </div>
         <div style="display:flex;align-items:center;gap:0.6rem;font-size:0.875rem">
@@ -30,8 +30,8 @@
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:0.5rem;align-self:center" x-data>
-      <button @click="$store.tennis.connectBLE()" class="btn btn-primary btn-sm" style="white-space:nowrap">
-        <i data-lucide="bluetooth" style="width:14px;height:14px"></i>
+      <button @click="$store.tennis.connectBLE()" class="btn btn-primary" style="white-space:nowrap">
+        <i data-lucide="bluetooth" style="width:15px;height:15px"></i>
         <span x-text="$store.tennis.webBleConnected ? '✅ Raquette connectée' : 'Connecter ma raquette'"></span>
       </button>
       <a href="/training" class="btn btn-ghost btn-sm" style="white-space:nowrap;justify-content:center">
@@ -43,64 +43,92 @@
 </div>
 {% endif %}
 
-<!-- ── Live stats ── -->
-<div class="grid-4 animate-in" style="margin-bottom:1.25rem"
-  x-data>
+<!-- ── Live stat cards ── -->
+<div class="grid-4 animate-in" style="margin-bottom:1.25rem" x-data>
+  <!-- Coups/min -->
   <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(99,102,241,0.10)">
+      <i data-lucide="activity" style="width:20px;height:20px;color:#6366f1"></i>
+    </div>
     <div class="stat-label">{{ t('stat.strokes_min') }}</div>
-    <div class="stat-value" x-text="$store.tennis.strokesPerMin">0</div>
+    <div class="stat-value" x-text="$store.tennis.strokesPerMin" style="color:#6366f1">0</div>
   </div>
+
+  <!-- Total coups -->
   <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(34,197,94,0.10)">
+      <i data-lucide="zap" style="width:20px;height:20px;color:var(--accent-green)"></i>
+    </div>
     <div class="stat-label">{{ t('stat.live_total') }}</div>
-    <div class="stat-value" x-text="$store.tennis.liveStrokes.total">0</div>
+    <div class="stat-value" x-text="$store.tennis.liveStrokes.total" style="color:var(--accent-green)">0</div>
   </div>
+
+  <!-- Sessions -->
   <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(249,115,22,0.10)">
+      <i data-lucide="calendar" style="width:20px;height:20px;color:var(--accent-orange)"></i>
+    </div>
     <div class="stat-label">{{ t('stat.sessions_today') }}</div>
-    <div class="stat-value">{{ sessions|length }}</div>
+    <div class="stat-value" style="color:var(--accent-orange)">{{ sessions|length }}</div>
   </div>
+
+  <!-- BLE Status -->
   <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(99,102,241,0.10)">
+      <i data-lucide="bluetooth" style="width:20px;height:20px;color:#6366f1"></i>
+    </div>
     <div class="stat-label">{{ t('stat.ble_status') }}</div>
-    <div class="stat-value" style="font-size:1rem;display:flex;align-items:center;gap:8px;margin-top:0.5rem">
+    <div style="display:flex;align-items:center;gap:8px;margin-top:0.5rem">
       <span class="dot" :class="$store.tennis.bleConnected ? 'dot-green animate-pulse' : 'dot-gray'"></span>
-      <span x-text="$store.tennis.bleConnected ? '{{ t('common.connected') }}' : '{{ t('common.offline') }}'"></span>
+      <span style="font-weight:700;font-size:0.95rem" x-text="$store.tennis.bleConnected ? '{{ t('common.connected') }}' : '{{ t('common.offline') }}'"></span>
     </div>
   </div>
+
+  <!-- ELO -->
   <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(168,85,247,0.10)">
+      <i data-lucide="award" style="width:20px;height:20px;color:var(--accent-purple)"></i>
+    </div>
     <div class="stat-label">{{ t('stat.elo') }}</div>
-    <div class="stat-value" style="font-size:1.5rem">{{ user.elo_rating | round(0) | int }}</div>
+    <div class="stat-value" style="font-size:1.6rem;color:var(--accent-purple)">{{ user.elo_rating | round(0) | int }}</div>
   </div>
-  <!-- Streak card -->
+
+  <!-- Streak -->
   <div class="stat-card" style="position:relative;overflow:hidden">
     {% if user.current_streak >= 3 %}
     <div style="position:absolute;top:0;right:0;bottom:0;width:3px;background:linear-gradient(to bottom,#f97316,#eab308)"></div>
     {% endif %}
+    <div class="stat-icon" style="background:rgba(249,115,22,0.10)">
+      <i data-lucide="flame" style="width:20px;height:20px;color:var(--accent-orange)"></i>
+    </div>
     <div class="stat-label">
-      {% if user.current_streak >= 7 %}⚡{% elif user.current_streak >= 3 %}🔥{% else %}📅{% endif %}
       {{ t('stat.streak') }}
     </div>
-    <div class="stat-value" style="font-size:1.5rem">
-      {{ user.current_streak }} jour{{ 's' if user.current_streak != 1 else '' }}
+    <div class="stat-value" style="font-size:1.6rem;color:var(--accent-orange)">
+      {{ user.current_streak }}<span style="font-size:1rem;font-weight:500;opacity:0.7"> j</span>
     </div>
-    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:2px">
-      {{ t('stat.record') }} : {{ user.max_streak }}j
+    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:4px">
+      Record : {{ user.max_streak }}j
     </div>
   </div>
 </div>
 
-<!-- ── Live stroke bars + Actions ── -->
+<!-- ── Live stroke bars + Quick actions ── -->
 <div class="grid-2" style="margin-bottom:1.25rem" x-data>
   <!-- Répartition live -->
   <div class="card">
     <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
-      <i data-lucide="activity" style="width:16px;height:16px;color:var(--accent-blue)"></i>
+      <span style="width:30px;height:30px;background:rgba(99,102,241,0.10);border-radius:8px;display:flex;align-items:center;justify-content:center">
+        <i data-lucide="activity" style="width:15px;height:15px;color:var(--accent-blue)"></i>
+      </span>
       {{ t('section.live_dist') }}
     </div>
     <template x-for="[label, key, color] in [
       ['BH Drive', 'bh_drive', '#6366f1'],
       ['BH Smash', 'bh_smash', '#a855f7'],
-      ['FH Drive', 'fh_drive', '#10b981'],
-      ['FH Loop',  'fh_loop',  '#f59e0b'],
-      ['FH Smash', 'fh_smash', '#f43f5e']
+      ['FH Drive', 'fh_drive', '#22c55e'],
+      ['FH Loop',  'fh_loop',  '#f97316'],
+      ['FH Smash', 'fh_smash', '#ef4444']
     ]">
       <div class="stroke-bar-wrap">
         <span class="stroke-bar-label" x-text="label"></span>
@@ -111,29 +139,30 @@
       </div>
     </template>
     <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-muted)">
-      Total : <strong x-text="$store.tennis.liveStrokes.total">0</strong>
+      Total : <strong x-text="$store.tennis.liveStrokes.total">0</strong> coups
     </div>
   </div>
 
   <!-- Actions rapides -->
   <div class="card">
     <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
-      <i data-lucide="play-circle" style="width:16px;height:16px;color:var(--accent-green)"></i>
+      <span style="width:30px;height:30px;background:rgba(34,197,94,0.10);border-radius:8px;display:flex;align-items:center;justify-content:center">
+        <i data-lucide="play-circle" style="width:15px;height:15px;color:var(--accent-green)"></i>
+      </span>
       {{ t('section.quick_actions') }}
     </div>
-    <div style="display:flex;flex-direction:column;gap:0.75rem" x-data>
+    <div style="display:flex;flex-direction:column;gap:0.625rem" x-data>
       {% if active_sessions %}
-        <div style="padding:0.75rem;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;font-size:0.85rem;">
-          <span class="dot dot-green animate-pulse" style="margin-right:6px"></span>
-          {{ t('dashboard.active_session') }}{{ active_sessions[0].id }}
+        <div style="padding:0.75rem;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:10px;font-size:0.85rem;display:flex;align-items:center;gap:8px">
+          <span class="dot dot-green animate-pulse"></span>
+          <span>{{ t('dashboard.active_session') }}{{ active_sessions[0].id }}</span>
         </div>
       {% endif %}
 
-      <!-- Connexion raquette (toujours visible) -->
       <template x-if="!$store.tennis.webBleConnected">
         <button @click="$store.tennis.connectBLE()"
                 class="btn btn-primary btn-lg"
-                style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none">
+                style="box-shadow:0 4px 16px rgba(99,102,241,0.25)">
           <i data-lucide="bluetooth" style="width:18px;height:18px"></i>
           {{ t('dashboard.racket_btn') }}
         </button>
@@ -141,8 +170,8 @@
       <template x-if="$store.tennis.webBleConnected">
         <button @click="$store.tennis.disconnectBLE()"
                 class="btn btn-ghost btn-lg"
-                style="border-color:rgba(16,185,129,0.4);color:#10b981">
-          <span class="dot dot-green animate-pulse" style="width:9px;height:9px;min-width:9px;border-radius:50%;background:#10b981"></span>
+                style="border-color:rgba(34,197,94,0.35);color:var(--accent-green)">
+          <span class="dot dot-green animate-pulse" style="width:9px;height:9px;min-width:9px"></span>
           <span x-text="$store.tennis.webBleDevice || '{{ t('nav.racket_connected') }}'"></span>
         </button>
       </template>
@@ -155,8 +184,8 @@
         <i data-lucide="trophy" style="width:18px;height:18px"></i>
         {{ t('dashboard.match_btn') }}
       </a>
-      <a href="/analysis" class="btn btn-ghost">
-        <i data-lucide="bar-chart-2" style="width:16px;height:16px"></i>
+      <a href="/analysis" class="btn btn-ghost btn-sm" style="justify-content:center">
+        <i data-lucide="bar-chart-2" style="width:15px;height:15px"></i>
         {{ t('dashboard.analysis_btn') }}
       </a>
     </div>
@@ -164,34 +193,36 @@
 </div>
 
 <!-- ── Objectifs de la semaine ── -->
-<div class="card animate-in" style="margin-bottom:1.25rem" id="goals-card"
+<div class="card animate-in" style="margin-bottom:1.25rem"
      x-data="{ goal: null, editing: false, ts: 0, tm: 0, tk: 0, saving: false }"
      x-init="fetch('/api/goals/week',{credentials:'include'}).then(r=>r.ok?r.json():null).then(d=>{if(d){goal=d;ts=d.targets.sessions;tm=d.targets.matches;tk=d.targets.strokes;}})">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
     <div style="font-weight:700;display:flex;align-items:center;gap:8px">
-      <i data-lucide="target" style="width:16px;height:16px;color:var(--accent-green)"></i>
+      <span style="width:30px;height:30px;background:rgba(34,197,94,0.10);border-radius:8px;display:flex;align-items:center;justify-content:center">
+        <i data-lucide="target" style="width:15px;height:15px;color:var(--accent-green)"></i>
+      </span>
       {{ t('section.weekly_goals') }}
     </div>
     <button class="btn btn-ghost btn-sm" @click="editing=!editing" x-text="editing ? '{{ t('common.cancel') }}' : '{{ t('common.modify') }}'"></button>
   </div>
 
   <!-- Edit form -->
-  <div x-show="editing" x-cloak style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:1rem;margin-bottom:1rem">
+  <div x-show="editing" x-cloak style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem">
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
       <div>
-        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">{{ t('goals.sessions') }}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;margin-bottom:4px">{{ t('goals.sessions') }}</div>
         <input type="number" min="0" max="30" x-model.number="ts"
-               style="width:100%;background:var(--bg-card);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:0.9rem">
+               class="input" style="padding:6px 10px;font-size:0.9rem">
       </div>
       <div>
-        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">{{ t('goals.strokes') }}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;margin-bottom:4px">{{ t('goals.strokes') }}</div>
         <input type="number" min="0" max="10000" step="50" x-model.number="tk"
-               style="width:100%;background:var(--bg-card);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:0.9rem">
+               class="input" style="padding:6px 10px;font-size:0.9rem">
       </div>
       <div>
-        <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px">{{ t('goals.matches') }}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);font-weight:600;margin-bottom:4px">{{ t('goals.matches') }}</div>
         <input type="number" min="0" max="20" x-model.number="tm"
-               style="width:100%;background:var(--bg-card);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:0.9rem">
+               class="input" style="padding:6px 10px;font-size:0.9rem">
       </div>
     </div>
     <button class="btn btn-primary btn-sm" :disabled="saving"
@@ -208,42 +239,40 @@
       <div style="color:var(--text-muted);font-size:0.875rem;padding:0.5rem 0">{{ t('common.loading') }}</div>
     </template>
     <template x-if="goal && !goal.has_targets">
-      <div style="color:var(--text-muted);font-size:0.875rem;padding:0.5rem 0">
-        {{ t('goals.no_goal') }}
-      </div>
+      <div style="color:var(--text-muted);font-size:0.875rem;padding:0.5rem 0">{{ t('goals.no_goal') }}</div>
     </template>
     <template x-if="goal && goal.has_targets">
-      <div style="display:flex;flex-direction:column;gap:0.75rem">
+      <div style="display:flex;flex-direction:column;gap:0.875rem">
         <template x-if="goal.targets.sessions > 0">
           <div>
-            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px">
-              <span style="color:var(--text-muted)">{{ t('goals.sessions') }}</span>
-              <span x-text="goal.progress.sessions + ' / ' + goal.targets.sessions"></span>
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:5px">
+              <span style="color:var(--text-muted);font-weight:500">{{ t('goals.sessions') }}</span>
+              <span style="font-weight:700" x-text="goal.progress.sessions + ' / ' + goal.targets.sessions"></span>
             </div>
-            <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
-              <div :style="`width:${Math.min(goal.pct.sessions,100)}%;height:100%;background:#6366f1;border-radius:3px;transition:width .5s`"></div>
+            <div style="height:7px;background:var(--bg-secondary);border-radius:4px;overflow:hidden">
+              <div :style="`width:${Math.min(goal.pct.sessions,100)}%;height:100%;background:linear-gradient(90deg,#6366f1,#4f46e5);border-radius:4px;transition:width .5s`"></div>
             </div>
           </div>
         </template>
         <template x-if="goal.targets.strokes > 0">
           <div>
-            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px">
-              <span style="color:var(--text-muted)">{{ t('goals.strokes') }}</span>
-              <span x-text="goal.progress.strokes + ' / ' + goal.targets.strokes"></span>
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:5px">
+              <span style="color:var(--text-muted);font-weight:500">{{ t('goals.strokes') }}</span>
+              <span style="font-weight:700" x-text="goal.progress.strokes + ' / ' + goal.targets.strokes"></span>
             </div>
-            <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
-              <div :style="`width:${Math.min(goal.pct.strokes,100)}%;height:100%;background:#10b981;border-radius:3px;transition:width .5s`"></div>
+            <div style="height:7px;background:var(--bg-secondary);border-radius:4px;overflow:hidden">
+              <div :style="`width:${Math.min(goal.pct.strokes,100)}%;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:4px;transition:width .5s`"></div>
             </div>
           </div>
         </template>
         <template x-if="goal.targets.matches > 0">
           <div>
-            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px">
-              <span style="color:var(--text-muted)">{{ t('goals.matches') }}</span>
-              <span x-text="goal.progress.matches + ' / ' + goal.targets.matches"></span>
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:5px">
+              <span style="color:var(--text-muted);font-weight:500">{{ t('goals.matches') }}</span>
+              <span style="font-weight:700" x-text="goal.progress.matches + ' / ' + goal.targets.matches"></span>
             </div>
-            <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden">
-              <div :style="`width:${Math.min(goal.pct.matches,100)}%;height:100%;background:#f59e0b;border-radius:3px;transition:width .5s`"></div>
+            <div style="height:7px;background:var(--bg-secondary);border-radius:4px;overflow:hidden">
+              <div :style="`width:${Math.min(goal.pct.matches,100)}%;height:100%;background:linear-gradient(90deg,#f97316,#ea580c);border-radius:4px;transition:width .5s`"></div>
             </div>
           </div>
         </template>
@@ -251,10 +280,13 @@
     </template>
   </div>
 </div>
+
 <!-- ── Sessions récentes ── -->
 <div class="card animate-in">
   <div style="font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:8px">
-    <i data-lucide="clock" style="width:16px;height:16px;color:var(--accent-orange)"></i>
+    <span style="width:30px;height:30px;background:rgba(249,115,22,0.10);border-radius:8px;display:flex;align-items:center;justify-content:center">
+      <i data-lucide="clock" style="width:15px;height:15px;color:var(--accent-orange)"></i>
+    </span>
     {{ t('section.recent_sessions') }}
   </div>
   <div class="table-wrap">
@@ -271,7 +303,7 @@
       <tbody>
         {% for s in sessions %}
         <tr>
-          <td>#{{ s.id }}</td>
+          <td style="font-weight:600;color:var(--text-muted);font-size:0.82rem">#{{ s.id }}</td>
           <td>
             <span class="badge {% if s.mode == 'training' %}badge-blue{% else %}badge-orange{% endif %}">
               {{ s.mode }}
@@ -282,19 +314,22 @@
               {{ s.status }}
             </span>
           </td>
-          <td style="color:var(--text-muted);font-size:0.8rem">
+          <td style="color:var(--text-muted);font-size:0.82rem">
             {{ s.started_at.strftime('%d/%m %H:%M') if s.started_at else '—' }}
           </td>
-          <td>{{ s.duration_s ~ 's' if s.duration_s else '—' }}</td>
+          <td style="font-weight:600">{{ s.duration_s ~ 's' if s.duration_s else '—' }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
     {% if not sessions %}
     <div class="empty-state">
-      <span style="font-size:2rem">🏓</span>
-      <span>{{ t('dashboard.no_sessions') }}</span>
-      <a href="/training" class="btn btn-primary" style="margin-top:0.5rem">{{ t('dashboard.start_session') }}</a>
+      <div style="width:56px;height:56px;background:var(--bg-secondary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:0.5rem">🏓</div>
+      <span style="font-weight:600">{{ t('dashboard.no_sessions') }}</span>
+      <a href="/training" class="btn btn-primary" style="margin-top:0.75rem">
+        <i data-lucide="zap" style="width:15px;height:15px"></i>
+        {{ t('dashboard.start_session') }}
+      </a>
     </div>
     {% endif %}
   </div>

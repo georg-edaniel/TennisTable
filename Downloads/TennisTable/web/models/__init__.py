@@ -11,3 +11,4 @@ from .badge import UserBadge
 from .weekly_goal import WeeklyGoal
 from .challenge import Challenge
 from .club import Club, ClubMember
+from .revoked_token import RevokedToken

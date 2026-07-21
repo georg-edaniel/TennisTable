@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr" data-theme="light">
 <head>
-<script>
+<script nonce="{{ csp_nonce }}">
   (function() {
     var th = localStorage.getItem('tt_theme') || 'light';
     document.documentElement.setAttribute('data-theme', th);
@@ -13,8 +13,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/app.css?v=5">
-  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" nonce="{{ csp_nonce }}"></script>
+  <script src="https://unpkg.com/lucide@latest" nonce="{{ csp_nonce }}"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Inter', sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased; }
@@ -39,6 +39,7 @@
   tab: '{{ initial_tab|default('login') }}',
   username: '', email: '', password: '', displayName: '',
   error: '', loading: false,
+  totpRequired: false, totpCode: '', pendingToken: '', backupMode: false,
 
   async doLogin() {
     this.error = ''; this.loading = true;
@@ -49,6 +50,30 @@
         body: JSON.stringify({username: this.username, password: this.password})
       });
       if (!r.ok) { const e = await r.json(); this.error = e.detail || 'Identifiants incorrects'; return; }
+      const d = await r.json();
+      if (d.totp_required) {
+        this.pendingToken = d.pending_token;
+        this.totpRequired = true;
+        return;
+      }
+      location.href = '/dashboard';
+    } catch(e) { this.error = 'Connexion impossible'; }
+    finally { this.loading = false; }
+  },
+
+  async doTotp() {
+    this.error = ''; this.loading = true;
+    try {
+      const endpoint = this.backupMode ? '/auth/totp/backup' : '/auth/totp/validate';
+      const body = this.backupMode
+        ? {pending_token: this.pendingToken, backup_code: this.totpCode}
+        : {pending_token: this.pendingToken, code: this.totpCode};
+      const r = await fetch(endpoint, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+      });
+      if (!r.ok) { const e = await r.json(); this.error = e.detail || 'Code invalide'; return; }
       location.href = '/dashboard';
     } catch(e) { this.error = 'Connexion impossible'; }
     finally { this.loading = false; }
@@ -149,8 +174,44 @@
         <p style="color:var(--text-muted);font-size:0.875rem;margin-top:0.25rem">Ping-Pong Connecté &amp; Intelligent</p>
       </div>
 
-      <!-- Tabs -->
-      <div class="login-tab-bar">
+      <!-- TOTP verification form (shown after successful password login when 2FA is active) -->
+      <div x-show="totpRequired" x-transition>
+        <div style="text-align:center;margin-bottom:1.5rem">
+          <div style="font-size:2rem;margin-bottom:0.5rem">🔐</div>
+          <p style="font-weight:700;font-size:1rem">Vérification en 2 étapes</p>
+          <p x-show="!backupMode" style="font-size:0.85rem;color:var(--text-muted);margin-top:0.25rem">Entrez le code à 6 chiffres de votre application</p>
+          <p x-show="backupMode" style="font-size:0.85rem;color:var(--text-muted);margin-top:0.25rem">Entrez un code de secours</p>
+        </div>
+        <div style="margin-bottom:1rem">
+          <label class="label" x-text="backupMode ? 'Code de secours' : 'Code TOTP (6 chiffres)'"></label>
+          <input class="input" type="text" x-model="totpCode"
+                 :placeholder="backupMode ? 'XXXXXXXX' : '000000'"
+                 :maxlength="backupMode ? 8 : 6"
+                 autocomplete="one-time-code"
+                 @keyup.enter="doTotp"
+                 style="text-align:center;letter-spacing:0.2em;font-size:1.25rem;font-weight:700">
+        </div>
+        <div x-show="error" x-text="error"
+             style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:0.6rem 0.875rem;color:var(--accent-red);font-size:0.85rem;margin-bottom:0.875rem"></div>
+        <button class="btn btn-primary btn-lg" style="width:100%;justify-content:center" @click="doTotp" :disabled="loading">
+          <span x-text="loading ? 'Vérification...' : 'Vérifier'"></span>
+        </button>
+        <div style="text-align:center;margin-top:1rem">
+          <button @click="backupMode = !backupMode; totpCode = ''; error = ''"
+                  style="background:none;border:none;color:var(--accent-blue);font-size:0.8rem;cursor:pointer;text-decoration:underline">
+            <span x-text="backupMode ? '← Utiliser le code TOTP' : 'Utiliser un code de secours'"></span>
+          </button>
+        </div>
+        <div style="text-align:center;margin-top:0.5rem">
+          <button @click="totpRequired = false; error = ''"
+                  style="background:none;border:none;color:var(--text-muted);font-size:0.8rem;cursor:pointer;text-decoration:underline">
+            ← Retour à la connexion
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabs (hidden while TOTP verification is shown) -->
+      <div class="login-tab-bar" x-show="!totpRequired">
         <button @click="tab='login'" class="login-tab" :class="tab==='login' && 'active'">
           Connexion
         </button>
@@ -160,7 +221,7 @@
       </div>
 
       <!-- Login form -->
-      <div x-show="tab==='login'" x-transition>
+      <div x-show="tab==='login' && !totpRequired" x-transition>
         <div style="margin-bottom:1rem">
           <label class="label">Nom d'utilisateur</label>
           <input class="input" type="text" x-model="username" placeholder="ex: admin" @keyup.enter="doLogin" autocomplete="username">
@@ -246,6 +307,6 @@
     Accepter
   </button>
 </div>
-<script>document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)lucide.createIcons()});</script>
+<script nonce="{{ csp_nonce }}">document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)lucide.createIcons()});</script>
 </body>
 </html>

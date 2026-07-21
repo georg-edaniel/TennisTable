@@ -18,3 +18,5 @@ sentry-sdk[fastapi]>=1.40.0
 psycopg2-binary>=2.9.9
 pywebpush>=2.0.0
 anthropic>=0.25.0
+pyotp==2.9.0
+qrcode[pil]==8.0

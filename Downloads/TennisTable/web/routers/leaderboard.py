@@ -68,6 +68,7 @@ def leaderboard_page(request: Request, db: Session = Depends(get_db)):
         "avg_elo": avg_elo,
         "total_players": total_players,
         "total_matches": total_matches,
+        "csp_nonce": getattr(request.state, "csp_nonce", ""),
     }
     return templates.TemplateResponse(request, "leaderboard.html", ctx)
 

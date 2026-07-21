@@ -2,7 +2,7 @@
 <html lang="{{ lang|default('fr') }}" data-theme="light" x-data>
 <head>
 <!-- Apply theme from localStorage BEFORE Alpine/CSS paint — prevents flash -->
-<script>
+<script nonce="{{ csp_nonce }}">
   (function() {
     var th = localStorage.getItem('tt_theme') || 'light';
     document.documentElement.setAttribute('data-theme', th);
@@ -23,16 +23,16 @@
   <link rel="stylesheet" href="/static/css/app.css?v={{ css_v }}">
 
   <!-- Alpine.js -->
-  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" nonce="{{ csp_nonce }}"></script>
 
   <!-- ApexCharts -->
-  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts" nonce="{{ csp_nonce }}"></script>
 
   <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@latest" nonce="{{ csp_nonce }}"></script>
 
   <!-- App JS -->
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/app.js" nonce="{{ csp_nonce }}"></script>
 
   <!-- PWA -->
   <link rel="manifest" href="/static/manifest.json">
@@ -40,7 +40,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-  <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js');</script>
+  <script nonce="{{ csp_nonce }}">if('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js');</script>
 
   {% block head %}{% endblock %}
 </head>
@@ -225,13 +225,17 @@
       <i data-lucide="key" style="width:13px;height:13px"></i>
       <span>{{ t('nav.password') }}</span>
     </a>
+    <a href="/security" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-bottom:0.4rem{% if request.url.path == '/security' %};background:var(--bg-secondary){% endif %}">
+      <i data-lucide="shield" style="width:13px;height:13px;color:var(--accent-green)"></i>
+      <span>Sécurité (2FA)</span>
+    </a>
     {% if user.subscription_tier == 'free' %}
     <a href="/pricing" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-bottom:0.4rem">
       <i data-lucide="arrow-up-circle" style="width:13px;height:13px"></i>
       <span>{{ t('nav.upgrade') }}</span>
     </a>
     {% endif %}
-    <a href="/login" onclick="fetch('/auth/logout',{method:'POST'}).then(()=>location='/login');return false;"
+    <a href="/login" @click.prevent="fetch('/auth/logout',{method:'POST'}).then(()=>{location.href='/login'})"
        class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;color:var(--accent-red);border-color:rgba(239,68,68,0.2)">
       <i data-lucide="log-out" style="width:13px;height:13px"></i>
       <span>{{ t('nav.logout') }}</span>
@@ -244,10 +248,10 @@
      style="display:none;position:sticky;top:0;z-index:900;background:rgba(249,115,22,0.08);border-bottom:1px solid rgba(249,115,22,0.2);padding:0.6rem 1rem;font-size:0.82rem;color:var(--accent-orange);align-items:center;gap:0.6rem;flex-wrap:wrap">
   <i data-lucide="alert-triangle" style="width:15px;height:15px;flex-shrink:0"></i>
   <span><strong>{{ t('ios.ble_title') }}</strong> — {{ t('ios.ble_body') }}</span>
-  <button onclick="this.parentElement.style.display='none';localStorage.setItem('tt_ios_banner_dismissed','1')"
+  <button @click="document.getElementById('ios-ble-banner').style.display='none';localStorage.setItem('tt_ios_banner_dismissed','1')"
           style="margin-left:auto;background:none;border:none;color:var(--accent-orange);cursor:pointer;font-size:1rem;line-height:1">✕</button>
 </div>
-<script>
+<script nonce="{{ csp_nonce }}">
   (function() {
     var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     var dismissed = localStorage.getItem('tt_ios_banner_dismissed');
@@ -276,7 +280,7 @@
   {% block content %}{% endblock %}
 </main>
 
-<script>
+<script nonce="{{ csp_nonce }}">
   document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) lucide.createIcons();
   });

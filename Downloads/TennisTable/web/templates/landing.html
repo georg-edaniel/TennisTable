@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr" data-theme="light">
 <head>
-<script>
+<script nonce="{{ csp_nonce }}">
   (function() {
     var th = localStorage.getItem('tt_theme') || 'light';
     document.documentElement.setAttribute('data-theme', th);
@@ -24,9 +24,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="TT Tracker">
   <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="/static/js/app.js"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" nonce="{{ csp_nonce }}"></script>
+  <script src="https://unpkg.com/lucide@latest" nonce="{{ csp_nonce }}"></script>
+  <script src="/static/js/app.js" nonce="{{ csp_nonce }}"></script>
   <style>
     .landing-features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; }
     .testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
@@ -399,7 +399,7 @@
     </div>
     <div id="faq-list">
       <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
+        <button class="faq-question" @click="toggleFaq($el)">
           Quel matériel est nécessaire ?
           <i data-lucide="chevron-down" class="faq-chevron" style="width:18px;height:18px"></i>
         </button>
@@ -408,7 +408,7 @@
         </div>
       </div>
       <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
+        <button class="faq-question" @click="toggleFaq($el)">
           Fonctionne-t-il sans raquette connectée ?
           <i data-lucide="chevron-down" class="faq-chevron" style="width:18px;height:18px"></i>
         </button>
@@ -417,7 +417,7 @@
         </div>
       </div>
       <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
+        <button class="faq-question" @click="toggleFaq($el)">
           Mes données sont-elles sécurisées ?
           <i data-lucide="chevron-down" class="faq-chevron" style="width:18px;height:18px"></i>
         </button>
@@ -426,7 +426,7 @@
         </div>
       </div>
       <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
+        <button class="faq-question" @click="toggleFaq($el)">
           Puis-je annuler l'abonnement Club à tout moment ?
           <i data-lucide="chevron-down" class="faq-chevron" style="width:18px;height:18px"></i>
         </button>
@@ -435,7 +435,7 @@
         </div>
       </div>
       <div class="faq-item">
-        <button class="faq-question" onclick="toggleFaq(this)">
+        <button class="faq-question" @click="toggleFaq($el)">
           Le site fonctionne-t-il sur mobile ?
           <i data-lucide="chevron-down" class="faq-chevron" style="width:18px;height:18px"></i>
         </button>
@@ -503,7 +503,7 @@
   </button>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
   document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) lucide.createIcons();
   });

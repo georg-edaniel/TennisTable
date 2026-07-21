@@ -6,7 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  getApiUrl, setApiUrl, login, register, logout,
+  getApiUrl, setApiUrl, login, loginTotp, register, logout,
   isLoggedIn, testConnection, syncMatch, flushSyncQueue, getSyncQueue,
 } from '../services/apiService';
 import { loadMatches } from '../storage/matchStorage';
@@ -23,6 +23,9 @@ export default function CloudSyncScreen() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [loggedIn, setLoggedIn] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [totpPending, setTotpPending] = useState(false);
+  const [pendingToken, setPendingToken] = useState('');
+  const [totpCode, setTotpCode] = useState('');
   const [testing, setTesting] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [connectionOk, setConnectionOk] = useState<boolean | null>(null);
@@ -59,13 +62,34 @@ export default function CloudSyncScreen() {
     }
     setLoading(true);
     await setApiUrl(apiUrl);
-    const { ok, error } = await login(username.trim(), password.trim());
+    const result = await login(username.trim(), password.trim());
     setLoading(false);
-    if (ok) {
+    if (result.totpRequired && result.pendingToken) {
+      setPendingToken(result.pendingToken);
+      setTotpPending(true);
+    } else if (result.ok) {
       setLoggedIn(true);
       setPassword('');
     } else {
-      Alert.alert('Connexion échouée', error ?? 'Identifiants incorrects');
+      Alert.alert('Connexion échouée', result.error ?? 'Identifiants incorrects');
+    }
+  }
+
+  async function handleTotpVerify() {
+    if (!totpCode.trim() || totpCode.length < 6) {
+      Alert.alert('Code requis', 'Saisis le code à 6 chiffres de ton application.');
+      return;
+    }
+    setLoading(true);
+    const { ok, error } = await loginTotp(pendingToken, totpCode.trim());
+    setLoading(false);
+    if (ok) {
+      setTotpPending(false);
+      setTotpCode('');
+      setPassword('');
+      setLoggedIn(true);
+    } else {
+      Alert.alert('Code invalide', error ?? 'Code TOTP incorrect');
     }
   }
 
@@ -167,8 +191,39 @@ export default function CloudSyncScreen() {
         )}
       </View>
 
+      {/* TOTP verification step */}
+      {totpPending && (
+        <View style={s.card}>
+          <View style={s.cardHeader}>
+            <Ionicons name="shield-checkmark-outline" size={14} color={ACCENT} />
+            <Text style={s.cardTitle}>VÉRIFICATION EN 2 ÉTAPES</Text>
+          </View>
+          <Text style={{ color: '#94a3b8', fontSize: 13, marginBottom: 12 }}>
+            Entrez le code à 6 chiffres de Google Authenticator ou Authy.
+          </Text>
+          <TextInput
+            style={[s.input, { textAlign: 'center', letterSpacing: 6, fontSize: 22, fontWeight: '700' }]}
+            value={totpCode}
+            onChangeText={setTotpCode}
+            placeholder="000000"
+            placeholderTextColor="#475569"
+            keyboardType="number-pad"
+            maxLength={6}
+          />
+          <View style={s.authRow}>
+            <TouchableOpacity style={[s.authBtn, { backgroundColor: ACCENT }]} onPress={handleTotpVerify} disabled={loading}>
+              {loading ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={s.authBtnTxt}>Vérifier</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.authBtn, s.authBtnSecondary]} onPress={() => { setTotpPending(false); setTotpCode(''); }} disabled={loading}>
+              <Text style={[s.authBtnTxt, { color: ACCENT }]}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* Auth */}
-      {loggedIn ? (
+      {!totpPending && loggedIn ? (
         <View style={s.card}>
           <View style={s.cardHeader}>
             <Ionicons name="person-circle-outline" size={14} color="#4ade80" />
@@ -183,7 +238,7 @@ export default function CloudSyncScreen() {
             <Text style={s.logoutTxt}>Se déconnecter</Text>
           </TouchableOpacity>
         </View>
-      ) : (
+      ) : !totpPending ? (
         <View style={s.card}>
           <View style={s.cardHeader}>
             <Ionicons name="lock-closed-outline" size={14} color={ACCENT} />
@@ -240,7 +295,7 @@ export default function CloudSyncScreen() {
             </View>
           )}
         </View>
-      )}
+      ) : null}
 
       {/* Sync */}
       <View style={s.card}>

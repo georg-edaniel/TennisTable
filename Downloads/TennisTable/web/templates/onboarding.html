@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/app.css?v=3">
-  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" nonce="{{ csp_nonce }}"></script>
+  <script src="https://unpkg.com/lucide@latest" nonce="{{ csp_nonce }}"></script>
   <style>
     .onboarding-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:2rem; background:radial-gradient(ellipse at 60% 20%,rgba(99,102,241,0.12) 0%,transparent 60%),var(--bg-primary); }
     .onboarding-card { width:100%; max-width:560px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:var(--radius-lg); padding:2.5rem 2rem; }
@@ -254,6 +254,6 @@
     </div>
   </div>
 </div>
-<script>document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)lucide.createIcons()});</script>
+<script nonce="{{ csp_nonce }}">document.addEventListener('DOMContentLoaded',()=>{if(window.lucide)lucide.createIcons()});</script>
 </body>
 </html>

@@ -62,7 +62,10 @@ async function apiFetch(path: string, options: RequestInit = {}): Promise<Respon
   return res;
 }
 
-export async function login(username: string, password: string): Promise<{ ok: boolean; error?: string }> {
+export async function login(
+  username: string,
+  password: string,
+): Promise<{ ok: boolean; error?: string; totpRequired?: boolean; pendingToken?: string }> {
   try {
     const base = await getApiUrl();
     const res = await fetch(`${base}/auth/login`, {
@@ -73,6 +76,32 @@ export async function login(username: string, password: string): Promise<{ ok: b
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       return { ok: false, error: err.detail ?? 'Identifiants incorrects' };
+    }
+    const data = await res.json();
+    if (data.totp_required) {
+      return { ok: false, totpRequired: true, pendingToken: data.pending_token };
+    }
+    await setTokens(data.access_token, data.refresh_token ?? '');
+    return { ok: true };
+  } catch (e: any) {
+    return { ok: false, error: e.message ?? 'Connexion impossible' };
+  }
+}
+
+export async function loginTotp(
+  pendingToken: string,
+  code: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const base = await getApiUrl();
+    const res = await fetch(`${base}/auth/totp/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pending_token: pendingToken, code }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return { ok: false, error: err.detail ?? 'Code invalide' };
     }
     const data = await res.json();
     await setTokens(data.access_token, data.refresh_token ?? '');

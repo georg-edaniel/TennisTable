@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/app.css?v=3">
-  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts" nonce="{{ csp_nonce }}"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" nonce="{{ csp_nonce }}"></script>
 </head>
 <body>
 
@@ -87,7 +87,7 @@
 
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 const radarData = {{ stats_json | safe }};
 const chart = new ApexCharts(document.getElementById('demo-radar'), {
   chart: { type: 'radar', height: 280, toolbar: { show: false }, background: 'transparent' },

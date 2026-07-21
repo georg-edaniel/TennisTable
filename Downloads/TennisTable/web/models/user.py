@@ -31,3 +31,6 @@ class User(Base):
     last_activity_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    totp_secret: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    totp_backup_codes: Mapped[str] = mapped_column(String, default="[]")  # JSON list of hashed codes

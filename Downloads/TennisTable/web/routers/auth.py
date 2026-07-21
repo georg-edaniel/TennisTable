@@ -1,4 +1,5 @@
 """Authentication routes."""
+import os
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -10,7 +11,7 @@ from web.core.database import get_db
 from web.core.rate_limit import limiter
 from web.core.security import (
     decode_token, create_access_token, create_refresh_token, create_guest_token,
-    hash_password, verify_password, revoke_token,
+    create_totp_pending_token, hash_password, verify_password, revoke_token,
 )
 from web.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, ChangePasswordRequest, _validate_password
 from web.schemas.user import UserOut
@@ -21,7 +22,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 ACCESS_COOKIE = "access_token"
 REFRESH_COOKIE = "refresh_token"
 
-_COOKIE_OPTS = dict(httponly=True, samesite="strict", secure=False)  # set secure=True behind HTTPS
+# secure=True when running on HTTPS (Render sets RENDER=true; also respects COOKIE_SECURE=true)
+_COOKIE_SECURE = bool(os.getenv("RENDER")) or os.getenv("COOKIE_SECURE", "").lower() in ("1", "true", "yes")
+_COOKIE_OPTS = dict(httponly=True, samesite="strict", secure=_COOKIE_SECURE)
 
 
 def _set_cookies(response: Response, tokens: dict):
@@ -37,6 +40,12 @@ def login(request: Request, req: LoginRequest, response: Response, db: Session =
     user = auth_service.authenticate(db, req.username, req.password)
     if not user:
         raise HTTPException(status_code=401, detail="Identifiants invalides ou compte verrouillé")
+
+    # If 2FA is enabled, issue a short-lived pending token instead of full tokens
+    if user.totp_enabled and user.totp_secret:
+        pending_token = create_totp_pending_token({"sub": str(user.id)})
+        return {"totp_required": True, "pending_token": pending_token}
+
     tokens = auth_service.make_tokens(user)
     _set_cookies(response, tokens)
     return {"access_token": tokens["access_token"], "token_type": "bearer",
@@ -190,6 +199,142 @@ async def forgot_password(request: Request, req: ForgotPasswordRequest, db: Sess
     db.commit()
 
     await send_reset(user.email, token_str)
+    return {"ok": True}
+
+
+# ── 2FA TOTP ──────────────────────────────────────────────────────────────────
+
+class TotpValidateRequest(BaseModel):
+    pending_token: str
+    code: str
+
+
+class TotpConfirmRequest(BaseModel):
+    code: str
+
+
+class TotpDisableRequest(BaseModel):
+    password: str
+
+
+class TotpBackupRequest(BaseModel):
+    pending_token: str
+    backup_code: str
+
+
+def _get_current_user(request: Request, db: Session) -> "User":
+    token = request.cookies.get(ACCESS_COOKIE)
+    if not token:
+        raise HTTPException(status_code=401)
+    try:
+        data = decode_token(token)
+    except Exception:
+        raise HTTPException(status_code=401)
+    user = auth_service.get_user_by_id(db, int(data["sub"]))
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401)
+    return user
+
+
+@router.post("/totp/validate")
+def totp_validate(req: TotpValidateRequest, response: Response, db: Session = Depends(get_db)):
+    """Second step of login when TOTP is enabled. Exchanges pending token + code for full tokens."""
+    try:
+        data = decode_token(req.pending_token)
+        if data.get("type") != "totp_pending":
+            raise ValueError
+    except Exception:
+        raise HTTPException(status_code=401, detail="Token de validation invalide ou expiré")
+
+    user = auth_service.get_user_by_id(db, int(data["sub"]))
+    if not user or not user.is_active or not user.totp_enabled:
+        raise HTTPException(status_code=401, detail="Utilisateur invalide")
+
+    from web.services.totp_service import verify_totp_code
+    if not verify_totp_code(user.totp_secret, req.code):
+        raise HTTPException(status_code=401, detail="Code TOTP incorrect")
+
+    tokens = auth_service.make_tokens(user)
+    _set_cookies(response, tokens)
+    return {"access_token": tokens["access_token"], "token_type": "bearer",
+            "must_change_password": user.must_change_password}
+
+
+@router.post("/totp/backup")
+def totp_use_backup(req: TotpBackupRequest, response: Response, db: Session = Depends(get_db)):
+    """Use a backup code instead of TOTP during login."""
+    try:
+        data = decode_token(req.pending_token)
+        if data.get("type") != "totp_pending":
+            raise ValueError
+    except Exception:
+        raise HTTPException(status_code=401, detail="Token de validation invalide ou expiré")
+
+    user = auth_service.get_user_by_id(db, int(data["sub"]))
+    if not user or not user.is_active or not user.totp_enabled:
+        raise HTTPException(status_code=401, detail="Utilisateur invalide")
+
+    from web.services.totp_service import verify_backup_code
+    if not verify_backup_code(user, req.backup_code):
+        raise HTTPException(status_code=401, detail="Code de secours invalide ou déjà utilisé")
+
+    db.commit()
+    tokens = auth_service.make_tokens(user)
+    _set_cookies(response, tokens)
+    return {"access_token": tokens["access_token"], "token_type": "bearer",
+            "must_change_password": user.must_change_password}
+
+
+@router.post("/totp/setup")
+def totp_setup(request: Request, db: Session = Depends(get_db)):
+    """Generate a new TOTP secret and return QR code (base64 PNG). Does NOT activate yet."""
+    user = _get_current_user(request, db)
+
+    from web.services.totp_service import generate_totp_secret, get_totp_uri, get_qr_code_base64
+    secret = generate_totp_secret()
+    uri = get_totp_uri(user, secret)
+    qr_b64 = get_qr_code_base64(uri)
+
+    # Store pending secret (not yet activated — confirmed via /totp/confirm)
+    user.totp_secret = secret
+    user.totp_enabled = False
+    db.commit()
+
+    return {"secret": secret, "qr_code": qr_b64, "uri": uri}
+
+
+@router.post("/totp/confirm")
+def totp_confirm(req: TotpConfirmRequest, request: Request, db: Session = Depends(get_db)):
+    """Confirm TOTP activation by verifying a valid code, then generate backup codes."""
+    user = _get_current_user(request, db)
+
+    if not user.totp_secret:
+        raise HTTPException(status_code=400, detail="Aucun secret TOTP configuré. Appelez /totp/setup d'abord.")
+
+    from web.services.totp_service import verify_totp_code, generate_backup_codes, hash_backup_codes
+    if not verify_totp_code(user.totp_secret, req.code):
+        raise HTTPException(status_code=400, detail="Code TOTP incorrect. Vérifiez l'heure de votre appareil.")
+
+    backup_codes = generate_backup_codes()
+    user.totp_enabled = True
+    user.totp_backup_codes = hash_backup_codes(backup_codes)
+    db.commit()
+
+    return {"ok": True, "backup_codes": backup_codes}
+
+
+@router.post("/totp/disable")
+def totp_disable(req: TotpDisableRequest, request: Request, db: Session = Depends(get_db)):
+    """Disable TOTP after verifying the user's password."""
+    user = _get_current_user(request, db)
+
+    if not verify_password(req.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Mot de passe incorrect")
+
+    user.totp_secret = None
+    user.totp_enabled = False
+    user.totp_backup_codes = "[]"
+    db.commit()
     return {"ok": True}
 
 

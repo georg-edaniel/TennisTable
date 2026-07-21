@@ -51,7 +51,9 @@ class WebConfig:
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
     guest_token_expire_hours: int = 24
-    allowed_origins: List[str] = field(default_factory=lambda: ["http://localhost:8000", "http://localhost:19006", "exp://localhost:8081"])
+    # En production, définir ALLOWED_ORIGINS=https://tennistable.onrender.com
+    # En dev mobile: ALLOWED_ORIGINS=http://localhost:8000,exp://localhost:8081
+    allowed_origins: List[str] = field(default_factory=lambda: ["http://localhost:8000"])
 
 
 @dataclass

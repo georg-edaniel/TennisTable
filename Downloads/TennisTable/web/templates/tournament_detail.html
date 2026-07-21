@@ -22,7 +22,7 @@
     </div>
     <div style="display:flex;gap:0.5rem">
       {% if tournament.status == 'pending' and not is_registered %}
-      <button class="btn btn-primary" onclick="joinTournament({{ tournament.id }})">
+      <button class="btn btn-primary" @click="joinTournament({{ tournament.id }})">
         <i data-lucide="user-plus" style="width:16px;height:16px"></i>
         Rejoindre
       </button>
@@ -30,7 +30,7 @@
       <span class="badge badge-green" style="align-self:center">Inscrit ✓</span>
       {% endif %}
       {% if user.role == 'admin' and tournament.status == 'pending' %}
-      <button class="btn btn-success" onclick="startTournament({{ tournament.id }})">
+      <button class="btn btn-success" @click="startTournament({{ tournament.id }})">
         <i data-lucide="play" style="width:16px;height:16px"></i>
         Démarrer
       </button>
@@ -132,7 +132,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
 
 function joinTournament(id) {

@@ -17,14 +17,14 @@
     </div>
     <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
       {% if is_owner %}
-        <button class="btn btn-ghost btn-sm" onclick="showInvite()">
+        <button class="btn btn-ghost btn-sm" @click="showInvite()">
           <i data-lucide="link" style="width:14px;height:14px"></i> Code d'invitation
         </button>
-        <button class="btn btn-ghost btn-sm" style="color:#f43f5e" onclick="confirmDelete()">
+        <button class="btn btn-ghost btn-sm" style="color:#f43f5e" @click="confirmDelete()">
           <i data-lucide="trash-2" style="width:14px;height:14px"></i> Supprimer
         </button>
       {% elif my_membership %}
-        <button class="btn btn-ghost btn-sm" style="color:#f87171" onclick="leaveClub()">
+        <button class="btn btn-ghost btn-sm" style="color:#f87171" @click="leaveClub()">
           <i data-lucide="log-out" style="width:14px;height:14px"></i> Quitter
         </button>
       {% else %}
@@ -66,7 +66,7 @@
             <span class="badge">Membre</span>
           {% endif %}
           {% if is_owner and m.user.id != user.id %}
-          <select onchange="setRole({{ m.user.id }}, this.value)" style="background:var(--bg-input,#1e1e2e);color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:2px 6px;font-size:0.75rem;cursor:pointer">
+          <select @change="setRole({{ m.user.id }}, $event.target.value)" style="background:var(--bg-input,#1e1e2e);color:var(--text-primary);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:2px 6px;font-size:0.75rem;cursor:pointer">
             <option value="member" {% if m.role=='member' %}selected{% endif %}>membre</option>
             <option value="coach" {% if m.role=='coach' %}selected{% endif %}>coach</option>
           </select>
@@ -119,20 +119,20 @@
 
 <!-- Invite code modal -->
 <div id="modal-invite" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.6);align-items:center;justify-content:center">
-  <div class="card" style="width:min(380px,90vw);text-align:center" onclick="event.stopPropagation()">
+  <div class="card" style="width:min(380px,90vw);text-align:center" @click.stop>
     <div style="font-weight:700;font-size:1.1rem;margin-bottom:1.25rem">Code d'invitation</div>
     <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem">Partagez ce code pour inviter des joueurs à rejoindre le club</p>
-    <div style="font-size:1.8rem;font-weight:900;letter-spacing:0.2em;color:var(--accent-blue);background:rgba(99,102,241,0.1);border:2px dashed rgba(99,102,241,0.3);border-radius:10px;padding:1rem;margin-bottom:1.25rem;cursor:pointer" onclick="copyCode()" title="Cliquer pour copier">
+    <div style="font-size:1.8rem;font-weight:900;letter-spacing:0.2em;color:var(--accent-blue);background:rgba(99,102,241,0.1);border:2px dashed rgba(99,102,241,0.3);border-radius:10px;padding:1rem;margin-bottom:1.25rem;cursor:pointer" @click="copyCode()" title="Cliquer pour copier">
       {{ club.invite_code or '—' }}
     </div>
     <div id="copy-confirm" style="display:none;font-size:0.8rem;color:#10b981;margin-bottom:0.75rem">✓ Copié !</div>
-    <button class="btn btn-ghost" onclick="document.getElementById('modal-invite').style.display='none'">Fermer</button>
+    <button class="btn btn-ghost" @click="document.getElementById('modal-invite').style.display='none'">Fermer</button>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', () => { if(window.lucide) lucide.createIcons(); });
 document.getElementById('modal-invite')?.addEventListener('click', () => {
   document.getElementById('modal-invite').style.display = 'none';

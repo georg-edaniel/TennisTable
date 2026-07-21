@@ -10,7 +10,7 @@
     </div>
     {% if user.role == 'admin' %}
     <button class="btn btn-primary"
-      onclick="document.getElementById('addModal').style.display='flex'">
+      @click="document.getElementById('addModal').style.display='flex'">
       <i data-lucide="plus" style="width:16px;height:16px"></i>
       Ajouter
     </button>
@@ -63,12 +63,12 @@
             <div style="display:flex;gap:0.5rem">
               {% if r.assigned_to %}
               <button class="btn btn-ghost btn-sm"
-                onclick="unassign({{ r.id }})">
+                @click="unassign({{ r.id }})">
                 Désassigner
               </button>
               {% else %}
               <select class="input" style="width:auto;padding:0.25rem 0.5rem;font-size:0.8rem"
-                onchange="assign({{ r.id }}, this.value); this.value=''">
+                @change="assign({{ r.id }}, $event.target.value); $event.target.value=''">
                 <option value="">Assigner à…</option>
                 {% for u in users %}
                 <option value="{{ u.id }}">{{ u.display_name or u.username }}</option>
@@ -103,8 +103,8 @@
     <label class="label">Couleur</label>
     <input type="color" id="newColor" value="#4dabf7" style="height:36px;border-radius:6px;border:1px solid var(--border);background:transparent;margin-bottom:1rem;width:100%">
     <div style="display:flex;gap:0.75rem">
-      <button class="btn btn-primary" onclick="addRacket()">Ajouter</button>
-      <button class="btn btn-ghost" onclick="document.getElementById('addModal').style.display='none'">Annuler</button>
+      <button class="btn btn-primary" @click="addRacket()">Ajouter</button>
+      <button class="btn btn-ghost" @click="document.getElementById('addModal').style.display='none'">Annuler</button>
     </div>
   </div>
 </div>
@@ -112,7 +112,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', () => { if(window.lucide) lucide.createIcons(); });
 
 async function assign(racketId, playerId) {

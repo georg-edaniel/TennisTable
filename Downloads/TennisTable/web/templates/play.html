@@ -260,7 +260,7 @@
 <header>
   <span class="logo">🏓</span>
   <h1>TT Tracker — Jouer</h1>
-  <button id="btn-new-game" onclick="newGame()">Nouveau jeu</button>
+  <button id="btn-new-game">Nouveau jeu</button>
 </header>
 
 <!-- Score bar -->
@@ -290,11 +290,11 @@
       <div class="badge">🌀 <span>Loop</span><span class="bval" id="c0-3">0</span></div>
     </div>
 
-    <button class="btn-connect" id="btn-ble-0" onclick="connectRacket(0)">
+    <button class="btn-connect" id="btn-ble-0">
       <span class="dot"></span> Connecter raquette
     </button>
 
-    <button class="btn-point btn-point-1" onclick="addPoint(0)">+1 Point</button>
+    <button class="btn-point btn-point-1" id="btn-point-0">+1 Point</button>
   </div>
 
   <!-- Joueur 2 -->
@@ -313,11 +313,11 @@
       <div class="badge">🌀 <span>Loop</span><span class="bval" id="c1-3">0</span></div>
     </div>
 
-    <button class="btn-connect" id="btn-ble-1" onclick="connectRacket(1)">
+    <button class="btn-connect" id="btn-ble-1">
       <span class="dot"></span> Connecter raquette
     </button>
 
-    <button class="btn-point btn-point-2" onclick="addPoint(1)">+1 Point</button>
+    <button class="btn-point btn-point-2" id="btn-point-1">+1 Point</button>
   </div>
 
 </div>
@@ -329,10 +329,10 @@
   <div id="winner-emoji">🏆</div>
   <div id="winner-text">Joueur 1 gagne !</div>
   <div id="winner-sub" id="winner-score-text"></div>
-  <button id="btn-winner-new" onclick="newGame()">Rejouer</button>
+  <button id="btn-winner-new">Rejouer</button>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce }}">
 const SERVICE_UUID = '19b10000-e8f2-537e-4f6c-d104768a1214';
 const CHAR_UUID    = '19b10001-e8f2-537e-4f6c-d104768a1214';
 
@@ -504,6 +504,15 @@ function newGame() {
 if (!navigator.bluetooth) {
   document.getElementById('ble-warning').style.display = 'block';
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-new-game').addEventListener('click', newGame);
+  document.getElementById('btn-winner-new').addEventListener('click', newGame);
+  document.getElementById('btn-ble-0').addEventListener('click', () => connectRacket(0));
+  document.getElementById('btn-ble-1').addEventListener('click', () => connectRacket(1));
+  document.getElementById('btn-point-0').addEventListener('click', () => addPoint(0));
+  document.getElementById('btn-point-1').addEventListener('click', () => addPoint(1));
+});
 </script>
 </body>
 </html>

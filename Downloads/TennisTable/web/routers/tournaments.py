@@ -38,6 +38,7 @@ def _ctx(request: Request, user: User | None, **extra) -> dict:
 
 
 def _resp(request: Request, template: str, ctx: dict, status: int = 200):
+    ctx.setdefault("csp_nonce", getattr(request.state, "csp_nonce", ""))
     return templates.TemplateResponse(request, template, ctx, status_code=status)
 
 

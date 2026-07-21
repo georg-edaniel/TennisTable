@@ -1,6 +1,7 @@
 """FastAPI application — lifespan manages MQTT bridge + WebSocket manager."""
 import asyncio
 import logging
+import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -24,6 +25,7 @@ from web.core.ws_manager import WebSocketManager
 from web.core.rate_limit import limiter
 from web.models import User, Racket, Tournament, TournamentParticipant, TournamentMatch, UserBadge, WeeklyGoal, Challenge, Club, ClubMember  # noqa: F401
 from web.models.password_reset import PasswordResetToken  # noqa: F401
+from web.models.revoked_token import RevokedToken  # noqa: F401
 from web.services.auth_service import create_admin_if_missing
 from web.services.session_service import record_if_active
 
@@ -95,6 +97,11 @@ async def lifespan(app: FastAPI):
     _init_db()
     logger.info("Database initialized")
 
+    # Load revoked tokens into memory so revocations survive restarts
+    from web.core.security import load_revoked_tokens_from_db
+    load_revoked_tokens_from_db()
+    logger.info("Revoked tokens loaded from DB")
+
     # WS manager
     ws_manager = WebSocketManager()
     app.state.ws_manager = ws_manager
@@ -139,6 +146,10 @@ class SecurityHeadersMiddleware:
             await self.app(scope, receive, send)
             return
 
+        # Generate a per-request nonce and store in scope state for templates
+        nonce = secrets.token_urlsafe(16)
+        scope.setdefault("state", {})["csp_nonce"] = nonce
+
         request = Request(scope)
         is_https = request.url.scheme == "https"
 
@@ -155,7 +166,7 @@ class SecurityHeadersMiddleware:
                     headers["Pragma"] = "no-cache"
                 headers["Content-Security-Policy"] = (
                     "default-src 'self'; "
-                    "script-src 'self' 'unsafe-inline' 'unsafe-eval' cdn.jsdelivr.net unpkg.com; "
+                    f"script-src 'self' 'nonce-{nonce}' 'strict-dynamic' 'unsafe-eval' cdn.jsdelivr.net unpkg.com; "
                     "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; "
                     "font-src 'self' fonts.gstatic.com data:; "
                     "img-src 'self' data: blob:; "

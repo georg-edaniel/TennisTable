@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}Sécurité du compte — TT Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+  <h1 class="page-title">Sécurité du compte</h1>
+  <p class="page-subtitle">Gérez la vérification en deux étapes (2FA)</p>
+</div>
+
+<div class="card animate-in" style="max-width:520px" x-data="{
+  totpEnabled: {{ 'true' if user.totp_enabled else 'false' }},
+  step: 'idle',
+  qrCode: '',
+  secret: '',
+  code: '',
+  backupCodes: [],
+  password: '',
+  loading: false,
+  error: '',
+
+  async startSetup() {
+    this.error = '';
+    this.loading = true;
+    try {
+      const r = await fetch('/auth/totp/setup', {method:'POST', headers:{'Content-Type':'application/json'}});
+      if (!r.ok) { const e = await r.json(); this.error = e.detail||'Erreur'; return; }
+      const d = await r.json();
+      this.qrCode = d.qr_code;
+      this.secret = d.secret;
+      this.step = 'qr';
+    } catch(e) { this.error = 'Erreur réseau'; }
+    finally { this.loading = false; }
+  },
+
+  async confirmSetup() {
+    if (!this.code || this.code.length !== 6) { this.error = 'Entrez le code à 6 chiffres.'; return; }
+    this.error = '';
+    this.loading = true;
+    try {
+      const r = await fetch('/auth/totp/confirm', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({code: this.code})
+      });
+      if (!r.ok) { const e = await r.json(); this.error = e.detail||'Code incorrect'; return; }
+      const d = await r.json();
+      this.backupCodes = d.backup_codes;
+      this.totpEnabled = true;
+      this.step = 'backup';
+    } catch(e) { this.error = 'Erreur réseau'; }
+    finally { this.loading = false; }
+  },
+
+  async disableTotp() {
+    if (!this.password) { this.error = 'Entrez votre mot de passe.'; return; }
+    this.error = '';
+    this.loading = true;
+    try {
+      const r = await fetch('/auth/totp/disable', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({password: this.password})
+      });
+      if (!r.ok) { const e = await r.json(); this.error = e.detail||'Erreur'; return; }
+      this.totpEnabled = false;
+      this.password = '';
+      this.step = 'idle';
+      if(window.$store?.tennis?.notify) $store.tennis.notify('2FA désactivé', 'info');
+    } catch(e) { this.error = 'Erreur réseau'; }
+    finally { this.loading = false; }
+  },
+
+  copySecret() {
+    navigator.clipboard.writeText(this.secret).then(() => {
+      if(window.$store?.tennis?.notify) $store.tennis.notify('Secret copié !', 'success');
+    });
+  },
+
+  copyBackupCodes() {
+    navigator.clipboard.writeText(this.backupCodes.join('\n')).then(() => {
+      if(window.$store?.tennis?.notify) $store.tennis.notify('Codes copiés !', 'success');
+    });
+  }
+}">
+
+  <!-- Error banner -->
+  <div x-show="error" x-text="error"
+       style="color:var(--accent-red);font-size:0.875rem;margin-bottom:1rem;padding:0.6rem 0.75rem;background:rgba(244,63,94,0.08);border-radius:6px;border:1px solid rgba(244,63,94,0.2)">
+  </div>
+
+  <!-- ── IDLE — show current status ───────────────────────────────────── -->
+  <div x-show="step === 'idle'">
+    <!-- Status badge -->
+    <div style="display:flex;align-items:center;gap:0.75rem;padding:1rem;border-radius:var(--radius-md);margin-bottom:1.5rem"
+         :style="totpEnabled ? 'background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25)' : 'background:var(--bg-secondary);border:1px solid var(--border)'">
+      <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0"
+           :style="totpEnabled ? 'background:rgba(16,185,129,0.15)' : 'background:rgba(148,163,184,0.15)'">
+        <i :data-lucide="totpEnabled ? 'shield-check' : 'shield-off'"
+           style="width:20px;height:20px"
+           :style="totpEnabled ? 'color:var(--accent-green)' : 'color:var(--text-muted)'"></i>
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:0.9rem" x-text="totpEnabled ? 'Vérification en 2 étapes activée' : 'Vérification en 2 étapes désactivée'"></div>
+        <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px"
+             x-text="totpEnabled ? 'Votre compte est protégé par Google Authenticator / Authy' : 'Activez la 2FA pour renforcer la sécurité de votre compte'"></div>
+      </div>
+    </div>
+
+    <!-- What is 2FA? (shown only when disabled) -->
+    <div x-show="!totpEnabled" style="margin-bottom:1.5rem;padding:0.875rem;background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--border)">
+      <div style="font-weight:600;font-size:0.85rem;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.4rem">
+        <i data-lucide="info" style="width:14px;height:14px;color:var(--accent-blue)"></i>
+        Comment ça fonctionne ?
+      </div>
+      <ul style="font-size:0.8rem;color:var(--text-secondary);padding-left:1rem;margin:0;line-height:1.8">
+        <li>Installez <strong>Google Authenticator</strong> ou <strong>Authy</strong> sur votre téléphone</li>
+        <li>Scannez le QR code qui s'affichera</li>
+        <li>Entrez le code à 6 chiffres à chaque connexion</li>
+        <li>8 codes de secours sont générés en cas de perte d'accès</li>
+      </ul>
+    </div>
+
+    <template x-if="!totpEnabled">
+      <button class="btn btn-primary" style="width:100%;justify-content:center" @click="startSetup" :disabled="loading">
+        <i data-lucide="shield-plus" style="width:16px;height:16px"></i>
+        <span x-text="loading ? 'Chargement...' : 'Activer la vérification en 2 étapes'"></span>
+      </button>
+    </template>
+
+    <template x-if="totpEnabled">
+      <button class="btn btn-ghost" style="width:100%;justify-content:center;color:var(--accent-red);border-color:rgba(239,68,68,0.2)" @click="step='disable'; error=''" :disabled="loading">
+        <i data-lucide="shield-off" style="width:16px;height:16px"></i>
+        Désactiver la 2FA
+      </button>
+    </template>
+  </div>
+
+  <!-- ── QR CODE — scan & confirm ──────────────────────────────────────── -->
+  <div x-show="step === 'qr'">
+    <div style="text-align:center;margin-bottom:1.25rem">
+      <p style="font-size:0.875rem;color:var(--text-secondary);margin-bottom:1rem">
+        Scannez ce QR code avec <strong>Google Authenticator</strong> ou <strong>Authy</strong>,
+        puis entrez le code à 6 chiffres pour confirmer.
+      </p>
+      <!-- QR code image -->
+      <div style="display:inline-block;padding:12px;background:#fff;border-radius:12px;border:1px solid var(--border);margin-bottom:1rem">
+        <img :src="'data:image/png;base64,' + qrCode" alt="QR Code 2FA" style="width:180px;height:180px;display:block">
+      </div>
+      <!-- Manual secret entry (fallback) -->
+      <details style="text-align:left;font-size:0.8rem;color:var(--text-muted)">
+        <summary style="cursor:pointer;margin-bottom:0.4rem">Saisie manuelle (si le scan ne fonctionne pas)</summary>
+        <div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem;background:var(--bg-secondary);border-radius:6px;border:1px solid var(--border);font-family:monospace;word-break:break-all">
+          <span x-text="secret" style="flex:1;font-size:0.78rem"></span>
+          <button @click="copySecret" style="background:none;border:none;cursor:pointer;color:var(--accent-blue);padding:0.2rem">
+            <i data-lucide="copy" style="width:14px;height:14px"></i>
+          </button>
+        </div>
+      </details>
+    </div>
+
+    <div style="margin-bottom:1rem">
+      <label class="label">Code de vérification (6 chiffres)</label>
+      <input class="input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6"
+             x-model="code" placeholder="123456" @keyup.enter="confirmSetup"
+             style="letter-spacing:0.25em;font-size:1.1rem;text-align:center">
+    </div>
+
+    <div style="display:flex;gap:0.75rem">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" @click="step='idle'; code=''; error=''">
+        <i data-lucide="arrow-left" style="width:14px;height:14px"></i> Annuler
+      </button>
+      <button class="btn btn-primary" style="flex:2;justify-content:center" @click="confirmSetup" :disabled="loading">
+        <i data-lucide="check" style="width:16px;height:16px"></i>
+        <span x-text="loading ? 'Vérification...' : 'Confirmer'"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── BACKUP CODES — save them! ─────────────────────────────────────── -->
+  <div x-show="step === 'backup'">
+    <div style="padding:0.875rem;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:var(--radius-md);margin-bottom:1.25rem;display:flex;gap:0.6rem">
+      <i data-lucide="alert-triangle" style="width:18px;height:18px;color:#f59e0b;flex-shrink:0;margin-top:1px"></i>
+      <div style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6">
+        <strong style="color:var(--text-primary)">Sauvegardez ces codes maintenant !</strong><br>
+        Ces 8 codes de secours sont affichés <strong>une seule fois</strong>. Utilisez-les si vous perdez accès à votre application d'authentification. Chaque code ne peut être utilisé qu'une seule fois.
+      </div>
+    </div>
+
+    <!-- Backup codes grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1.25rem;padding:1rem;background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--border)">
+      <template x-for="(code, i) in backupCodes" :key="i">
+        <div style="font-family:monospace;font-size:0.9rem;font-weight:600;padding:0.35rem 0.5rem;background:var(--bg-primary);border-radius:4px;border:1px solid var(--border);text-align:center;letter-spacing:0.08em" x-text="code"></div>
+      </template>
+    </div>
+
+    <div style="display:flex;gap:0.75rem;margin-bottom:1rem">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:0.82rem" @click="copyBackupCodes">
+        <i data-lucide="copy" style="width:14px;height:14px"></i> Copier
+      </button>
+    </div>
+
+    <div style="padding:0.75rem;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:var(--radius-md);margin-bottom:1.25rem;display:flex;align-items:center;gap:0.5rem">
+      <i data-lucide="shield-check" style="width:16px;height:16px;color:var(--accent-green)"></i>
+      <span style="font-size:0.83rem;font-weight:600;color:var(--accent-green)">La 2FA est maintenant activée sur votre compte !</span>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%;justify-content:center" @click="step='idle'">
+      <i data-lucide="check-circle" style="width:16px;height:16px"></i>
+      J'ai sauvegardé mes codes
+    </button>
+  </div>
+
+  <!-- ── DISABLE — ask password ─────────────────────────────────────────── -->
+  <div x-show="step === 'disable'">
+    <div style="padding:0.875rem;background:rgba(244,63,94,0.06);border:1px solid rgba(244,63,94,0.2);border-radius:var(--radius-md);margin-bottom:1.25rem;display:flex;gap:0.6rem">
+      <i data-lucide="alert-circle" style="width:18px;height:18px;color:var(--accent-red);flex-shrink:0;margin-top:1px"></i>
+      <span style="font-size:0.82rem;color:var(--text-secondary);line-height:1.6">
+        Désactiver la 2FA <strong>réduit la sécurité</strong> de votre compte. Confirmez avec votre mot de passe.
+      </span>
+    </div>
+
+    <div style="margin-bottom:1.25rem">
+      <label class="label">Mot de passe actuel</label>
+      <input class="input" type="password" x-model="password" placeholder="••••••••" @keyup.enter="disableTotp">
+    </div>
+
+    <div style="display:flex;gap:0.75rem">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" @click="step='idle'; password=''; error=''">
+        <i data-lucide="arrow-left" style="width:14px;height:14px"></i> Annuler
+      </button>
+      <button class="btn btn-ghost" style="flex:2;justify-content:center;color:var(--accent-red);border-color:rgba(239,68,68,0.2)" @click="disableTotp" :disabled="loading">
+        <i data-lucide="shield-off" style="width:16px;height:16px"></i>
+        <span x-text="loading ? 'Désactivation...' : 'Désactiver la 2FA'"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Divider + password link -->
+  <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border)">
+    <a href="/change-password" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center">
+      <i data-lucide="key" style="width:13px;height:13px"></i>
+      Modifier le mot de passe
+    </a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+document.addEventListener('DOMContentLoaded', () => { if(window.lucide) lucide.createIcons(); });
+</script>
+{% endblock %}

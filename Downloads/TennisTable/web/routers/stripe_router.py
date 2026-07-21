@@ -40,6 +40,7 @@ def pricing_page(request: Request, db: Session = Depends(get_db)):
             "user": user,
             "access_token": token,
             "stripe_publishable_key": settings.stripe.publishable_key,
+            "csp_nonce": getattr(request.state, "csp_nonce", ""),
         },
     )
 
@@ -77,9 +78,10 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     from web.core.stripe_service import handle_webhook
     try:
         event = handle_webhook(payload, sig_header)
-    except Exception as exc:
-        logger.warning("Webhook validation failed: %s", exc)
-        raise HTTPException(status_code=400, detail="Invalid webhook")
+    except Exception:
+        # Return 200 so Stripe does not retry; log without exposing exception details
+        logger.warning("Stripe webhook signature validation failed")
+        return {"ok": False}
 
     if event["type"] == "checkout.session.completed":
         session_data = event["data"]["object"]
@@ -101,7 +103,8 @@ def subscription_success(request: Request, db: Session = Depends(get_db)):
     token = request.cookies.get(ACCESS_COOKIE, "")
     return templates.TemplateResponse(
         request, "subscription_success.html",
-        {"user": user, "access_token": token},
+        {"user": user, "access_token": token,
+         "csp_nonce": getattr(request.state, "csp_nonce", "")},
     )
 
 

@@ -92,14 +92,17 @@ def make_tokens(user: User) -> dict:
 
 
 def create_admin_if_missing(db: Session):
-    """Seed admin / admin123 on first run — must_change_password=True forces change on login."""
+    """On first run, create admin with a random password — printed once to logs.
+    must_change_password=True forces an immediate password change on first login."""
     existing = get_user_by_username(db, "admin")
     if existing:
         return
+    import secrets as _secrets
+    initial_password = _secrets.token_urlsafe(16)
     admin = User(
         username="admin",
         email="admin@local",
-        password_hash=hash_password("admin123"),
+        password_hash=hash_password(initial_password),
         role="admin",
         display_name="Administrateur",
         must_change_password=True,
@@ -107,3 +110,7 @@ def create_admin_if_missing(db: Session):
     )
     db.add(admin)
     db.commit()
+    logger.warning("=" * 60)
+    logger.warning("ADMIN INITIAL PASSWORD: %s", initial_password)
+    logger.warning("Changez-le immédiatement via /change-password")
+    logger.warning("=" * 60)

@@ -69,19 +69,19 @@
           <td>
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
               {% if u.role != 'admin' %}
-              <button class="btn btn-ghost btn-sm" onclick="toggleRole({{ u.id }}, '{{ u.role }}')">
+              <button class="btn btn-ghost btn-sm" @click="toggleRole({{ u.id }}, '{{ u.role }}')">
                 Promouvoir admin
               </button>
               {% else %}
-              <button class="btn btn-ghost btn-sm" onclick="toggleRole({{ u.id }}, '{{ u.role }}')">
+              <button class="btn btn-ghost btn-sm" @click="toggleRole({{ u.id }}, '{{ u.role }}')">
                 Rétrograder
               </button>
               {% endif %}
               <button class="btn btn-sm {% if u.is_active %}btn-danger{% else %}btn-success{% endif %}"
-                onclick="toggleActive({{ u.id }}, {{ 'false' if u.is_active else 'true' }})">
+                @click="toggleActive({{ u.id }}, {{ 'false' if u.is_active else 'true' }})">
                 {{ 'Désactiver' if u.is_active else 'Activer' }}
               </button>
-              <button class="btn btn-ghost btn-sm" onclick="resetPwd({{ u.id }})">
+              <button class="btn btn-ghost btn-sm" @click="resetPwd({{ u.id }})">
                 Reset MDP
               </button>
             </div>
@@ -95,7 +95,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 document.addEventListener('DOMContentLoaded', () => {
   if(window.lucide) lucide.createIcons();
 

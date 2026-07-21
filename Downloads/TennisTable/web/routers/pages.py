@@ -1,4 +1,5 @@
 """HTML page routes (Jinja2) — starlette 1.0.0 API."""
+import re
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, Request, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
@@ -44,10 +45,12 @@ def _ctx(request: Request, user: User | None, **extra) -> dict:
 
 def _resp(request: Request, template: str, ctx: dict, status: int = 200):
     """Starlette 1.0 TemplateResponse(request, name, context).
-    Always injects lang + t so every template can use t() regardless of route."""
+    Always injects lang + t so every template can use t() regardless of route.
+    Also injects csp_nonce for Content-Security-Policy nonce-based script allowance."""
     if "t" not in ctx:
         lang = resolve_lang(request.cookies.get("tt_lang"))
         ctx = {"lang": lang, "t": get_translator(lang), **ctx}
+    ctx.setdefault("csp_nonce", getattr(request.state, "csp_nonce", ""))
     return templates.TemplateResponse(request, template, ctx, status_code=status)
 
 
@@ -248,13 +251,29 @@ def setup(request: Request, db: Session = Depends(get_db)):
     return _resp(request, "setup.html", _ctx(request, user, rackets=rackets))
 
 
+@router.get("/security", response_class=HTMLResponse)
+def security_page(request: Request, db: Session = Depends(get_db)):
+    user = _get_user(request, db)
+    if not user:
+        return RedirectResponse("/login")
+    redir = _check_onboarding(user)
+    if redir:
+        return redir
+    return _resp(request, "totp_setup.html", _ctx(request, user))
+
+
 @router.get("/forgot-password", response_class=HTMLResponse)
 def forgot_password_page(request: Request):
     return _resp(request, "forgot_password.html", {})
 
 
+_TOKEN_RE = re.compile(r"^[A-Za-z0-9_\-]{10,128}$")
+
 @router.get("/reset-password", response_class=HTMLResponse)
 def reset_password_page(request: Request, token: str = ""):
+    # Validate token format before passing to template (prevents junk in URL)
+    if token and not _TOKEN_RE.match(token):
+        token = ""
     return _resp(request, "reset_password.html", {"token": token})
 
 

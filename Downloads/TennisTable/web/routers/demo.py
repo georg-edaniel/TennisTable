@@ -34,5 +34,6 @@ def demo_page(request: Request):
             "stats_json": json.dumps(_DEMO_STATS["radar"]),
             "lang": lang,
             "t": get_translator(lang),
+            "csp_nonce": getattr(request.state, "csp_nonce", ""),
         },
     )

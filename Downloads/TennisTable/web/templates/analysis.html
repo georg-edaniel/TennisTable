@@ -143,7 +143,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
 {% if post_session_id %}
 fetch('/api/analysis/coach-tip/{{ post_session_id }}', {credentials: 'include'})
   .then(r => r.ok ? r.json() : null)
